@@ -1,0 +1,14 @@
+# Secrets — never commit
+.env
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Generated database (recreate with: python setup_db.py)
+*.db
+
+# Stray empty file
+/python

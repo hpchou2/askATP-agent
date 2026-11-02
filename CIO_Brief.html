@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATP Fulfillment Agent — CIO Brief</title>
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: #1f2d47;
+    --accent: #3b82f6;
+    --accent2: #06b6d4;
+    --accent3: #8b5cf6;
+    --green: #10b981;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --tag-bg: rgba(59,130,246,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    scroll-behavior: smooth;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(11,15,26,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 52px;
+  }
+  nav .logo { font-weight: 700; font-size: 0.9rem; color: var(--accent2); letter-spacing: 0.05em; }
+  nav .links { display: flex; gap: 1.5rem; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 0.82rem; transition: color .2s; }
+  nav a:hover { color: var(--text); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+    background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(59,130,246,0.15) 0%, transparent 70%);
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%231f2d47' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    opacity: 0.3;
+  }
+  .eyebrow {
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--accent2); margin-bottom: 1rem;
+    border: 1px solid rgba(6,182,212,0.3); padding: 4px 14px; border-radius: 20px;
+    background: rgba(6,182,212,0.08);
+  }
+  .hero h1 {
+    font-size: clamp(2.2rem, 5vw, 4rem); font-weight: 800;
+    background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    max-width: 900px; line-height: 1.15; margin-bottom: 1.2rem;
+  }
+  .hero h1 span {
+    background: linear-gradient(135deg, #3b82f6, #06b6d4);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero .subtitle {
+    font-size: 1.15rem; color: #94a3b8; max-width: 680px; margin-bottom: 2.5rem;
+  }
+  .tags { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; margin-bottom: 3rem; }
+  .tag {
+    background: var(--tag-bg); border: 1px solid rgba(59,130,246,0.25);
+    border-radius: 6px; padding: 4px 12px; font-size: 0.78rem; color: var(--accent);
+  }
+  .tag.green { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.25); color: var(--green); }
+  .tag.purple { background: rgba(139,92,246,0.1); border-color: rgba(139,92,246,0.25); color: var(--accent3); }
+  .tag.amber { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.25); color: var(--amber); }
+
+  .metrics-row {
+    display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center;
+  }
+  .metric-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.2rem 2rem; text-align: center; min-width: 160px;
+  }
+  .metric-card .num { font-size: 2rem; font-weight: 800; color: var(--accent2); line-height: 1; }
+  .metric-card .label { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+
+  /* SECTIONS */
+  section { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 0.5rem;
+  }
+  h2 {
+    font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 700; margin-bottom: 1rem; color: #f1f5f9;
+  }
+  .intro-text { color: #94a3b8; max-width: 700px; font-size: 1.05rem; margin-bottom: 2.5rem; }
+
+  /* PROBLEM / SOLUTION SPLIT */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media(max-width: 700px) { .split { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 1.8rem;
+  }
+  .card.highlighted { border-color: rgba(59,130,246,0.4); background: rgba(59,130,246,0.04); }
+  .card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+  .card ul { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+  .card ul li { font-size: 0.9rem; color: #94a3b8; padding-left: 1.2rem; position: relative; }
+  .card ul li::before { content: '→'; position: absolute; left: 0; color: var(--accent); font-size: 0.8rem; }
+  .card ul li strong { color: var(--text); }
+
+  /* ARCHITECTURE */
+  .arch-container { display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem; }
+
+  /* FLOW DIAGRAM */
+  .flow {
+    display: flex; align-items: flex-start; justify-content: center;
+    gap: 0; flex-wrap: wrap; margin: 2.5rem 0;
+  }
+  .flow-node {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    min-width: 120px;
+  }
+  .flow-box {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.7rem 1rem; font-size: 0.82rem; font-weight: 600;
+    width: 110px; transition: all .2s;
+  }
+  .flow-box:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .flow-box.blue { border-color: rgba(59,130,246,0.5); color: var(--accent); background: rgba(59,130,246,0.08); }
+  .flow-box.cyan { border-color: rgba(6,182,212,0.5); color: var(--accent2); background: rgba(6,182,212,0.08); }
+  .flow-box.green { border-color: rgba(16,185,129,0.5); color: var(--green); background: rgba(16,185,129,0.08); }
+  .flow-box.purple { border-color: rgba(139,92,246,0.5); color: var(--accent3); background: rgba(139,92,246,0.08); }
+  .flow-box.amber { border-color: rgba(245,158,11,0.5); color: var(--amber); background: rgba(245,158,11,0.08); }
+  .flow-box .sub { font-size: 0.65rem; font-weight: 400; color: var(--muted); margin-top: 3px; }
+  .flow-arrow {
+    font-size: 1.2rem; color: var(--muted); padding: 0 4px; align-self: center;
+    margin-top: -1rem;
+  }
+  .flow-label { font-size: 0.65rem; color: var(--muted); margin-top: 4px; max-width: 110px; }
+
+  /* AGENT CARDS */
+  .agent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-top: 1.5rem; }
+  @media(max-width: 700px) { .agent-grid { grid-template-columns: 1fr; } }
+  .agent-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;
+  }
+  .agent-card .agent-title { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .agent-card .agent-role { font-size: 0.72rem; color: var(--muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  .agent-card .tools { display: flex; flex-direction: column; gap: 0.4rem; }
+  .tool-pill {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 6px;
+    padding: 3px 10px; font-size: 0.72rem; font-family: monospace; color: #94a3b8;
+  }
+
+  /* DECISION TABLE */
+  table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; font-size: 0.85rem; }
+  th { background: var(--surface2); color: var(--muted); font-weight: 600; padding: 0.6rem 1rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); color: #cbd5e1; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 600;
+  }
+  .badge-green { background: rgba(16,185,129,0.15); color: var(--green); }
+  .badge-amber { background: rgba(245,158,11,0.15); color: var(--amber); }
+  .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+  .badge-blue { background: rgba(59,130,246,0.15); color: var(--accent); }
+
+  /* ASSUMPTIONS */
+  .assumption-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
+  @media(max-width: 700px) { .assumption-grid { grid-template-columns: 1fr; } }
+  .assumption-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem;
+    display: flex; gap: 0.8rem;
+  }
+  .assumption-item .icon { font-size: 1.1rem; flex-shrink: 0; }
+  .assumption-item h4 { font-size: 0.85rem; font-weight: 600; margin-bottom: 0.25rem; }
+  .assumption-item p { font-size: 0.78rem; color: #94a3b8; }
+
+  /* TECH STACK */
+  .stack-row { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.5rem; }
+  .stack-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.6rem 1rem; display: flex; align-items: center; gap: 0.6rem;
+    font-size: 0.82rem;
+  }
+  .stack-item .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-blue { background: var(--accent); }
+  .dot-cyan { background: var(--accent2); }
+  .dot-green { background: var(--green); }
+  .dot-purple { background: var(--accent3); }
+  .dot-amber { background: var(--amber); }
+
+  /* ROADMAP */
+  .roadmap { display: flex; flex-direction: column; gap: 0; margin-top: 2rem; position: relative; }
+  .roadmap::before {
+    content: ''; position: absolute; left: 18px; top: 24px; bottom: 0;
+    width: 2px; background: var(--border); z-index: 0;
+  }
+  .roadmap-item { display: flex; gap: 1.5rem; padding-bottom: 2rem; position: relative; z-index: 1; }
+  .roadmap-dot {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700;
+    border: 2px solid;
+  }
+  .roadmap-dot.now { background: rgba(59,130,246,0.2); border-color: var(--accent); color: var(--accent); }
+  .roadmap-dot.next { background: rgba(139,92,246,0.2); border-color: var(--accent3); color: var(--accent3); }
+  .roadmap-dot.future { background: rgba(16,185,129,0.2); border-color: var(--green); color: var(--green); }
+  .roadmap-content h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.3rem; }
+  .roadmap-content p { font-size: 0.82rem; color: #94a3b8; }
+  .roadmap-content ul { margin-top: 0.4rem; }
+  .roadmap-content ul li { font-size: 0.8rem; color: #64748b; padding-left: 1rem; position: relative; margin-bottom: 2px; }
+  .roadmap-content ul li::before { content: '·'; position: absolute; left: 0; }
+
+  /* HIGHLIGHT BOX */
+  .highlight-box {
+    background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(6,182,212,0.06));
+    border: 1px solid rgba(59,130,246,0.25); border-radius: 14px; padding: 1.8rem 2rem;
+    margin-top: 2rem;
+  }
+  .highlight-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 0.8rem; color: var(--accent2); }
+  .highlight-box p { font-size: 0.88rem; color: #94a3b8; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border); padding: 2rem;
+    text-align: center; color: var(--muted); font-size: 0.78rem;
+  }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">ATP FULFILLMENT AGENT</div>
+  <div class="links">
+    <a href="#problem">Problem</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#intelligence">AI Logic</a>
+    <a href="#assumptions">Assumptions</a>
+    <a href="#roadmap">Roadmap</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="eyebrow">Prototype · Supply Chain AI</div>
+  <h1>Autonomous ATP Fulfillment<br><span>Powered by Multi-Agent AI</span></h1>
+  <p class="subtitle">
+    An AI agent system that checks inventory availability, evaluates delivery feasibility,
+    and automatically escalates to air freight when authorized — all in a single API call.
+  </p>
+  <div class="tags">
+    <span class="tag">Supply Chain</span>
+    <span class="tag green">LangGraph Multi-Agent</span>
+    <span class="tag purple">Claude Sonnet</span>
+    <span class="tag amber">SAP ATP Logic</span>
+    <span class="tag">FastAPI</span>
+    <span class="tag green">Policy-Driven</span>
+  </div>
+  <div class="metrics-row">
+    <div class="metric-card">
+      <div class="num">3</div>
+      <div class="label">Specialized AI Agents</div>
+    </div>
+    <div class="metric-card">
+      <div class="num">1</div>
+      <div class="label">API Call End-to-End</div>
+    </div>
+    <div class="metric-card">
+      <div class="num">100%</div>
+      <div class="label">Decision Auditability</div>
+    </div>
+    <div class="metric-card">
+      <div class="num">0</div>
+      <div class="label">Manual Touches</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- PROBLEM -->
+<section id="problem">
+  <div class="section-label">Context & Motivation</div>
+  <h2>The Problem This Solves</h2>
+  <p class="intro-text">
+    In supply chain operations, every delayed order triggers a manual chase: check SAP stock, check purchase orders,
+    consult the logistics policy, decide whether to switch freight mode. This takes hours — and errors are costly.
+  </p>
+  <div class="split">
+    <div class="card">
+      <h3>⚠️ Before: Manual Workflow</h3>
+      <ul>
+        <li><strong>Planner queries SAP</strong> for stock and open POs (15–30 min)</li>
+        <li><strong>ATP calculation</strong> done manually in spreadsheet (error-prone)</li>
+        <li><strong>Policy check</strong> requires consulting logistics manager (hours)</li>
+        <li><strong>PO update</strong> submitted as change order in SAP (1–2 days)</li>
+        <li><strong>No audit trail</strong> linking the decision to policy justification</li>
+        <li><strong>Inconsistent</strong> decisions across planners and shifts</li>
+      </ul>
+    </div>
+    <div class="card highlighted">
+      <h3>✅ After: AI Agent Workflow</h3>
+      <ul>
+        <li><strong>Single API call</strong> triggers the entire workflow (seconds)</li>
+        <li><strong>Deterministic ATP logic</strong> mirrors SAP's calculation engine</li>
+        <li><strong>Policy enforcement</strong> is automated and plant-specific</li>
+        <li><strong>Minimum POs switched</strong> — cost impact minimized algorithmically</li>
+        <li><strong>Full trace</strong> of every agent decision and tool call returned</li>
+        <li><strong>Consistent</strong> — temperature=0 means same logic every time</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <h3>Domain: Available-to-Promise (ATP)</h3>
+    <p>
+      ATP is a core SAP supply chain function: "Can we promise this customer their <strong>X units by date Y?</strong>"
+      The answer depends on current unrestricted stock, minus committed open sales orders, plus expected incoming
+      purchase orders — walked chronologically until coverage is reached. This system replicates that logic
+      in Python, then adds AI reasoning on top for escalation decisions.
+    </p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="section-label">System Design</div>
+  <h2>Architecture</h2>
+  <p class="intro-text">
+    A <strong>supervisor-subordinate multi-agent graph</strong> built on LangGraph. One orchestrating agent
+    routes work to two specialized agents. No agent calls tools outside its domain.
+  </p>
+
+  <!-- FLOW DIAGRAM -->
+  <div class="flow">
+    <div class="flow-node">
+      <div class="flow-box cyan">POST /atp-check<div class="sub">Customer Request</div></div>
+      <div class="flow-label">matnr · werks · qty · date</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="flow-box blue">Supervisor<div class="sub">Orchestrator</div></div>
+      <div class="flow-label">Routes & Synthesizes</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="flow-box amber">SAP Agent<div class="sub">ReAct</div></div>
+      <div class="flow-label">Extract · ATP · Switch</div>
+    </div>
+    <div class="flow-arrow">⇄</div>
+    <div class="flow-node">
+      <div class="flow-box purple">Policy Agent<div class="sub">ReAct</div></div>
+      <div class="flow-label">Air Freight Rules</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node">
+      <div class="flow-box green">Response<div class="sub">answer + trace</div></div>
+      <div class="flow-label">Decision + Audit Trail</div>
+    </div>
+  </div>
+
+  <!-- AGENT CARDS -->
+  <div class="agent-grid">
+    <div class="agent-card" style="border-color:rgba(59,130,246,0.3)">
+      <div class="agent-title" style="color:var(--accent)">Supervisor</div>
+      <div class="agent-role">Orchestrator · State Machine</div>
+      <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:1rem;">
+        Reads full message history after each step and decides what to do next.
+        Uses <strong>structured output</strong> (JSON schema) to force deterministic routing.
+        Never calls tools — delegates everything.
+      </div>
+      <div class="tools">
+        <div class="tool-pill">routes → sap_agent</div>
+        <div class="tool-pill">routes → policy_agent</div>
+        <div class="tool-pill">routes → FINISH</div>
+      </div>
+    </div>
+    <div class="agent-card" style="border-color:rgba(245,158,11,0.3)">
+      <div class="agent-title" style="color:var(--amber)">SAP Agent</div>
+      <div class="agent-role">ReAct · Inventory & Logistics</div>
+      <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:1rem;">
+        Executes supply chain queries against the database.
+        Uses a <strong>think-act-observe</strong> loop to chain tool calls in the right order.
+      </div>
+      <div class="tools">
+        <div class="tool-pill">sap_extract()</div>
+        <div class="tool-pill">calculate_atp()</div>
+        <div class="tool-pill">po_logistic_method_change()</div>
+      </div>
+    </div>
+    <div class="agent-card" style="border-color:rgba(139,92,246,0.3)">
+      <div class="agent-title" style="color:var(--accent3)">Policy Agent</div>
+      <div class="agent-role">ReAct · Compliance</div>
+      <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:1rem;">
+        Reads the corporate air shipping policy (Markdown) and applies it
+        to the specific plant in question. Returns a verdict with
+        <strong>cited policy excerpt</strong>.
+      </div>
+      <div class="tools">
+        <div class="tool-pill">read_air_shipping_policy()</div>
+        <div class="tool-pill">→ PERMITTED / NOT PERMITTED</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DECISION TABLE -->
+  <h3 style="margin-top:2.5rem;font-size:1rem;font-weight:700;color:#f1f5f9;">Routing Decision Matrix</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>ATP Result</th>
+        <th>fulfillable</th>
+        <th>on_time</th>
+        <th>Policy</th>
+        <th>Outcome</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Stock available today</td>
+        <td><span class="badge badge-green">✓</span></td>
+        <td><span class="badge badge-green">✓</span></td>
+        <td>—</td>
+        <td><span class="badge badge-green">Order Confirmed</span></td>
+      </tr>
+      <tr>
+        <td>PO covers request on time</td>
+        <td><span class="badge badge-green">✓</span></td>
+        <td><span class="badge badge-green">✓</span></td>
+        <td>—</td>
+        <td><span class="badge badge-green">Confirmed via SEA PO</span></td>
+      </tr>
+      <tr>
+        <td>PO late — air may help</td>
+        <td><span class="badge badge-green">✓</span></td>
+        <td><span class="badge badge-amber">✗</span></td>
+        <td><span class="badge badge-green">Permitted</span></td>
+        <td><span class="badge badge-blue">POs Switched to AIR</span></td>
+      </tr>
+      <tr>
+        <td>PO late — air blocked</td>
+        <td><span class="badge badge-green">✓</span></td>
+        <td><span class="badge badge-amber">✗</span></td>
+        <td><span class="badge badge-red">Blocked</span></td>
+        <td><span class="badge badge-amber">Late Delivery Advised</span></td>
+      </tr>
+      <tr>
+        <td>Quantity shortage</td>
+        <td><span class="badge badge-red">✗</span></td>
+        <td>—</td>
+        <td>—</td>
+        <td><span class="badge badge-red">Cannot Fulfill</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<hr class="divider">
+
+<!-- AI INTELLIGENCE -->
+<section id="intelligence">
+  <div class="section-label">Core AI Logic</div>
+  <h2>Where the Intelligence Lives</h2>
+  <p class="intro-text">
+    Three layers of intelligence work together: deterministic supply chain math,
+    policy reasoning by language model, and a cost-aware PO selection algorithm.
+  </p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
+    <div class="card">
+      <h3>🧮 ATP Algorithm</h3>
+      <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:1rem;">
+        Mirrors SAP's native ATP calculation. Deterministic — no LLM involved in the math.
+      </p>
+      <div style="background:var(--surface2);border-radius:8px;padding:1rem;font-family:monospace;font-size:0.78rem;color:#94a3b8;line-height:1.7;">
+        available_now = stock − Σ(open SOs)<br>
+        <span style="color:var(--green)">IF available_now ≥ qty → fulfill today</span><br>
+        ELSE walk POs by delivery date:<br>
+        &nbsp;&nbsp;cumulative += PO.qty<br>
+        &nbsp;&nbsp;<span style="color:var(--accent2)">IF cumulative ≥ qty → earliest_date = PO.eindt</span><br>
+        &nbsp;&nbsp;<span style="color:var(--amber)">on_time = (earliest_date ≤ requested_date)</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>⚖️ Break-Even PO Selection</h3>
+      <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:1rem;">
+        When switching to AIR, only the <em>minimum necessary</em> POs are updated.
+        POs fully absorbed by committed sales orders are never touched.
+      </p>
+      <div style="background:var(--surface2);border-radius:8px;padding:1rem;font-family:monospace;font-size:0.78rem;color:#94a3b8;line-height:1.7;">
+        <span style="color:var(--muted)">// Phase 1: skip SO-absorbed POs</span><br>
+        WHILE running &lt; 0: absorb POs, skip<br><br>
+        <span style="color:var(--muted)">// Phase 2: switch break-even → decisive</span><br>
+        FOR remaining POs:<br>
+        &nbsp;&nbsp;<span style="color:var(--accent)">SWITCH to AIR</span><br>
+        &nbsp;&nbsp;<span style="color:var(--green)">IF coverage ≥ qty → STOP</span>
+      </div>
+    </div>
+    <div class="card" style="grid-column:1/-1">
+      <h3>📋 Policy-as-a-Document</h3>
+      <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:0.8rem;">
+        Air freight authorization rules live in a <strong>Markdown file</strong>, not in code.
+        The Policy Agent reads it at runtime and reasons about the specific plant.
+        This means rules can be updated by a logistics manager — no code deploy required.
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:0.6rem;">
+        <span class="badge badge-green">TW01 — Always permitted</span>
+        <span class="badge badge-blue">JP01 — Permitted ≤14 days late</span>
+        <span class="badge badge-blue">SG01 — Permitted if qty &gt; 500</span>
+        <span class="badge badge-red">TW02 — Blocked (cost ceiling)</span>
+        <span class="badge badge-red">MY01 — Blocked (cost reduction active)</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight-box" style="margin-top:1.5rem">
+    <h3>Full Auditability: Every Decision is Traceable</h3>
+    <p>
+      The API response includes both an <code>answer</code> (plain-English summary) and a
+      <code>trace</code> (full message log of every agent action, tool call, and reasoning step).
+      This is critical for enterprise supply chain: compliance teams can reconstruct exactly why
+      a PO was switched, which policy clause authorized it, and what the stock position was at decision time.
+    </p>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ASSUMPTIONS -->
+<section id="assumptions">
+  <div class="section-label">Scope & Boundaries</div>
+  <h2>Assumptions & Known Constraints</h2>
+  <p class="intro-text">
+    This is a working prototype with deliberate scope boundaries.
+    Each assumption below represents a known gap with a clear production path.
+  </p>
+  <div class="assumption-grid">
+    <div class="assumption-item">
+      <div class="icon">🗄️</div>
+      <div>
+        <h4>Mock Database (SQLite)</h4>
+        <p>SAP data is simulated with seed records. No live SAP RFC/BAPI connector. Production requires SAP integration via PYCO or OpenAPI wrapper.</p>
+      </div>
+    </div>
+    <div class="assumption-item">
+      <div class="icon">🏭</div>
+      <div>
+        <h4>Single-Plant Scope</h4>
+        <p>ATP logic handles one plant (<code>werks</code>) per request. Multi-plant allocation and network-level fulfillment are out of scope.</p>
+      </div>
+    </div>
+    <div class="assumption-item">
+      <div class="icon">📦</div>
+      <div>
+        <h4>Unrestricted Stock Only</h4>
+        <p>Uses SAP's <code>labst</code> (unrestricted) field. Quality inspection, blocked, and in-transit stock are excluded — matching standard ATP convention.</p>
+      </div>
+    </div>
+    <div class="assumption-item">
+      <div class="icon">💱</div>
+      <div>
+        <h4>No Freight Cost Comparison</h4>
+        <p>Switching to AIR is authorized by policy, not by computed ROI. A production build should integrate freight rate APIs for cost-benefit gating.</p>
+      </div>
+    </div>
+    <div class="assumption-item">
+      <div class="icon">↩️</div>
+      <div>
+        <h4>No Rollback / Change Approval</h4>
+        <p>PO method changes write directly to DB. Production requires SAP change order workflow with approval steps and rollback capability.</p>
+      </div>
+    </div>
+    <div class="assumption-item">
+      <div class="icon">⚡</div>
+      <div>
+        <h4>Synchronous / Single-Threaded</h4>
+        <p>LLM calls are blocking. SQLite doesn't support concurrent writes. Suitable for demo load only — not high-volume production.</p>
+      </div>
+    </div>
+    <div class="assumption-item">
+      <div class="icon">🔐</div>
+      <div>
+        <h4>No Authentication</h4>
+        <p>The <code>/atp-check</code> endpoint has no API key, rate limiting, or role-based access. Any caller can trigger PO changes in the current prototype.</p>
+      </div>
+    </div>
+    <div class="assumption-item">
+      <div class="icon">🌊</div>
+      <div>
+        <h4>SEA→AIR Escalation Only</h4>
+        <p>The system escalates freight; it does not de-escalate. A PO switched to AIR cannot be reverted automatically — that requires a manual SAP change order per policy.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- TECH STACK -->
+<section>
+  <div class="section-label">Technology</div>
+  <h2>Stack Summary</h2>
+  <div class="stack-row">
+    <div class="stack-item"><div class="dot dot-cyan"></div>FastAPI + Uvicorn — REST API layer</div>
+    <div class="stack-item"><div class="dot dot-blue"></div>LangGraph — Multi-agent state graph</div>
+    <div class="stack-item"><div class="dot dot-purple"></div>LangChain / LangChain-Anthropic — Agent + tool wiring</div>
+    <div class="stack-item"><div class="dot dot-amber"></div>Claude Sonnet 4.6 — Core LLM (temp=0)</div>
+    <div class="stack-item"><div class="dot dot-green"></div>SQLite — Mock SAP database</div>
+    <div class="stack-item"><div class="dot dot-blue"></div>Pydantic — Structured output + validation</div>
+    <div class="stack-item"><div class="dot dot-cyan"></div>Python 3.10+ — Runtime</div>
+  </div>
+  <div style="margin-top:1.5rem;display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+    <div class="card">
+      <h3>AI Model Choices</h3>
+      <table style="margin-top:0.8rem">
+        <thead>
+          <tr><th>Model</th><th>Use Case</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>claude-sonnet-4-6</code> ✓</td><td>Default — speed + cost balance</td></tr>
+          <tr><td><code>claude-opus-4</code></td><td>Complex multi-step reasoning</td></tr>
+          <tr><td><code>claude-haiku-4.5</code></td><td>High throughput / cost testing</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Why temperature=0?</h3>
+      <p style="font-size:0.82rem;color:#94a3b8;margin-top:0.5rem;">
+        Supply chain routing decisions must be <strong>reproducible</strong>. The same ATP scenario
+        must always produce the same routing outcome. Temperature=0 eliminates randomness — this is
+        a deliberate product decision, not a default.
+      </p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <div class="section-label">What's Next</div>
+  <h2>From Prototype to Production</h2>
+  <p class="intro-text">
+    The prototype proves the concept and validates the agent architecture.
+    Three phases to production readiness.
+  </p>
+  <div class="roadmap">
+    <div class="roadmap-item">
+      <div class="roadmap-dot now">P1</div>
+      <div class="roadmap-content">
+        <h4>Now — Prototype (Current State)</h4>
+        <p>Functional demo with mock SAP data. Full agent flow validated.</p>
+        <ul>
+          <li>SQLite mock database with 4 materials, 5 POs</li>
+          <li>5 test scenarios covering all decision paths</li>
+          <li>Full message trace and audit trail</li>
+        </ul>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot next">P2</div>
+      <div class="roadmap-content">
+        <h4>Beta — Integration</h4>
+        <p>Connect to real systems, harden for concurrent use.</p>
+        <ul>
+          <li>PostgreSQL (replace SQLite for concurrency)</li>
+          <li>SAP RFC/BAPI connector via PYCO or REST API</li>
+          <li>API authentication (API key / OAuth)</li>
+          <li>Async LLM calls to prevent request blocking</li>
+          <li>Freight cost API integration for ROI gating</li>
+        </ul>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-dot future">P3</div>
+      <div class="roadmap-content">
+        <h4>Production — Scale & Govern</h4>
+        <p>Enterprise-grade reliability, compliance, and observability.</p>
+        <ul>
+          <li>Multi-plant allocation logic</li>
+          <li>Human-in-the-loop approval gate for high-value PO switches</li>
+          <li>LLM cost/token monitoring and budget guardrails</li>
+          <li>Full audit logging to data warehouse</li>
+          <li>Rollback workflow via SAP change orders</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- CLOSING -->
+<section style="text-align:center;padding-bottom:6rem">
+  <div class="section-label">Summary</div>
+  <h2 style="max-width:700px;margin:0 auto 1rem">AI PM Perspective</h2>
+  <p style="color:#94a3b8;max-width:680px;margin:0 auto 2rem;font-size:1rem">
+    This system demonstrates the full lifecycle of an AI product decision:
+    identifying the right problem to automate, choosing an agent architecture that matches
+    the workflow structure, drawing clear scope boundaries, and designing for explainability
+    from day one — because supply chain decisions require audit trails, not black boxes.
+  </p>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;max-width:700px;margin:0 auto">
+    <div class="card" style="text-align:center">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem">🎯</div>
+      <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.3rem">Right Problem</div>
+      <div style="font-size:0.78rem;color:#64748b">Manual, repetitive, rules-based — high AI automation fit</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem">🏗️</div>
+      <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.3rem">Right Architecture</div>
+      <div style="font-size:0.78rem;color:#64748b">Agent separation mirrors organizational roles (planner, compliance)</div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div style="font-size:1.5rem;margin-bottom:0.5rem">📊</div>
+      <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.3rem">Right Constraints</div>
+      <div style="font-size:0.78rem;color:#64748b">Explainability, auditability, and determinism prioritized over novelty</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  ATP Fulfillment Agent · Prototype · Built with LangGraph + Claude Sonnet · All data is mock/fictional
+</footer>
+
+</body>
+</html>
