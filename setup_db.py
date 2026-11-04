@@ -3,13 +3,38 @@ setup_db.py — Create and seed the mock SAP database (sap_mock.db).
 
 Run once before starting the agent:
     python setup_db.py
+
+All dates are relative to the day you run this script, so the test scenarios
+in the README give the same results whenever they are run.
 """
 
+import json
 import sqlite3
 import os
+from datetime import date, timedelta
 
 # Place the database file in the same folder as this script
 DB_PATH = os.path.join(os.path.dirname(__file__), "sap_mock.db")
+
+# Days after the seed date for each PO arrival and SO due date
+PO_ARRIVAL_DAYS = {
+    "PO1001": 40, "PO1002": 45, "PO1003": 50,
+    "PO1004": 35, "PO1005": 45, "PO1006": 55,
+}
+SO_DUE_DAYS = 30
+
+# The five README test scenarios: (matnr, requested_qty, days from seed date)
+TEST_REQUESTS = [
+    ("Test 1 - from current stock",       "MAT001",  20, 10),
+    ("Test 2 - via incoming PO, on time", "MAT002", 100, 45),
+    ("Test 3 - PO late -> AIR",            "MAT001", 100, 10),
+    ("Test 4 - quantity shortage",        "MAT003", 200, 50),
+    ("Test 5 - skip SO-absorbed PO",      "MAT004",  50, 10),
+]
+
+
+def _day(base: date, days: int) -> str:
+    return (base + timedelta(days=days)).isoformat()
 
 
 def create_tables(conn: sqlite3.Connection) -> None:
@@ -63,19 +88,21 @@ def create_tables(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def seed_data(conn: sqlite3.Connection) -> None:
+def seed_data(conn: sqlite3.Connection, base: date | None = None) -> None:
     """
     Populates mock data for a small electronics warehouse.
 
+    Dates are offsets from `base` (default: today), written below as T+n days.
+
     Inventory snapshot:
       Material | Description       | Stock | SO Committed | Net Avail | POs
-      ---------+-------------------+-------+--------------+-----------+------------------------------------------
-      MAT001   | Server CPU Module |  150  |     120      |     30    | PO1001: 2026-07-10 +100 SEA
-      MAT002   | Memory 32GB       |  300  |     250      |     50    | PO1002: 2026-07-15 +200 SEA
-      MAT003   | NVMe SSD 1TB      |   80  |      80      |      0    | PO1003: 2026-07-20 +150 SEA
-      MAT004   | Graphics Card 8GB |   50  |     200      |   -150    | PO1004: 2026-07-05 +100 SEA
-               |                   |       |   (SO2004    |           | PO1005: 2026-07-15 +120 SEA
-               |                   |       |  + SO2005)   |           | PO1006: 2026-07-25 +100 SEA
+      ---------+-------------------+-------+--------------+-----------+-------------------
+      MAT001   | Server CPU Module |  150  |     120      |     30    | PO1001: T+40 +100
+      MAT002   | Memory 32GB       |  300  |     250      |     50    | PO1002: T+45 +200
+      MAT003   | NVMe SSD 1TB      |   80  |      80      |      0    | PO1003: T+50 +150
+      MAT004   | Graphics Card 8GB |   50  |     200      |   -150    | PO1004: T+35 +100
+               |                   |       |   (SO2004    |           | PO1005: T+45 +120
+               |                   |       |  + SO2005)   |           | PO1006: T+55 +100
 
     MAT004 is the break-even demonstration: available_now = 50 − 200 = −150.
       PO walk for requested_qty=50:
@@ -84,6 +111,9 @@ def seed_data(conn: sqlite3.Connection) -> None:
         PO1006 (+100): running = +170 → coverage already reached, leave untouched
       switch_plan = ["PO1005"]; remaining_pos = ["PO1004", "PO1006"]
     """
+    base = base or date.today()
+    po_date = {po: _day(base, d) for po, d in PO_ARRIVAL_DAYS.items()}
+    so_date = _day(base, SO_DUE_DAYS)
     cur = conn.cursor()
 
     # ── Material master ───────────────────────────────────────────────────────
@@ -114,13 +144,13 @@ def seed_data(conn: sqlite3.Connection) -> None:
 
     # ── Purchase orders — vendor deliveries scheduled in the future ───────────
     pos = [
-        ("PO1001", "MAT001", "TW01", 100, "2026-07-10", "SEA"),
-        ("PO1002", "MAT002", "TW01", 200, "2026-07-15", "SEA"),
-        ("PO1003", "MAT003", "TW01", 150, "2026-07-20", "SEA"),
+        ("PO1001", "MAT001", "TW01", 100, po_date["PO1001"], "SEA"),
+        ("PO1002", "MAT002", "TW01", 200, po_date["PO1002"], "SEA"),
+        ("PO1003", "MAT003", "TW01", 150, po_date["PO1003"], "SEA"),
         # MAT004 — break-even scenario (running starts at −150):
-        ("PO1004", "MAT004", "TW01", 100, "2026-07-05", "SEA"),  # running → −50  (SO-absorbed, skip)
-        ("PO1005", "MAT004", "TW01", 120, "2026-07-15", "SEA"),  # running → +70  (break-even + decisive)
-        ("PO1006", "MAT004", "TW01", 100, "2026-07-25", "SEA"),  # running → +170 (post-coverage, untouched)
+        ("PO1004", "MAT004", "TW01", 100, po_date["PO1004"], "SEA"),  # running → −50  (SO-absorbed, skip)
+        ("PO1005", "MAT004", "TW01", 120, po_date["PO1005"], "SEA"),  # running → +70  (break-even + decisive)
+        ("PO1006", "MAT004", "TW01", 100, po_date["PO1006"], "SEA"),  # running → +170 (post-coverage, untouched)
     ]
     cur.executemany(
         "INSERT OR REPLACE INTO purchase_orders "
@@ -131,12 +161,12 @@ def seed_data(conn: sqlite3.Connection) -> None:
 
     # ── Sales orders — existing commitments to customers ─────────────────────
     sos = [
-        ("SO2001", "MAT001", "TW01", 120, "2026-06-30", "OPEN"),
-        ("SO2002", "MAT002", "TW01", 250, "2026-06-30", "OPEN"),
-        ("SO2003", "MAT003", "TW01",  80, "2026-06-30", "OPEN"),
+        ("SO2001", "MAT001", "TW01", 120, so_date, "OPEN"),
+        ("SO2002", "MAT002", "TW01", 250, so_date, "OPEN"),
+        ("SO2003", "MAT003", "TW01",  80, so_date, "OPEN"),
         # MAT004 — two SOs totalling 200, far exceeding current stock of 50
-        ("SO2004", "MAT004", "TW01", 100, "2026-06-30", "OPEN"),
-        ("SO2005", "MAT004", "TW01", 100, "2026-06-30", "OPEN"),
+        ("SO2004", "MAT004", "TW01", 100, so_date, "OPEN"),
+        ("SO2005", "MAT004", "TW01", 100, so_date, "OPEN"),
     ]
     cur.executemany(
         "INSERT OR REPLACE INTO sales_orders "
@@ -155,20 +185,28 @@ def main() -> None:
 
     conn = sqlite3.connect(DB_PATH)
     create_tables(conn)
-    seed_data(conn)
+    seed_data(conn, date.today())
     conn.close()
 
+    base = date.today()
     print(f"[setup] Database created  : {DB_PATH}")
     print("[setup] Tables populated  : material_master, stock, purchase_orders, sales_orders")
+    print(f"[setup] Dates are relative to today ({base.isoformat()})")
     print()
-    print("  Material | Description       | Stock | SO Committed | Net Avail | POs")
-    print("  ---------+-------------------+-------+--------------+-----------+--------------------------------------------")
-    print("  MAT001   | Server CPU Module |  150  |     120      |     30    | PO1001: 2026-07-10 +100 SEA")
-    print("  MAT002   | Memory 32GB       |  300  |     250      |     50    | PO1002: 2026-07-15 +200 SEA")
-    print("  MAT003   | NVMe SSD 1TB      |   80  |      80      |      0    | PO1003: 2026-07-20 +150 SEA")
-    print("  MAT004   | Graphics Card 8GB |   50  |     200      |   -150    | PO1004: 2026-07-05 +100 SEA (SO-absorbed)")
-    print("           |                   |       |              |           | PO1005: 2026-07-15 +120 SEA (break-even)")
-    print("           |                   |       |              |           | PO1006: 2026-07-25 +100 SEA (post-coverage)")
+    print("  Material | Stock | SO Committed | Net Avail | POs (all SEA)")
+    print("  ---------+-------+--------------+-----------+------------------------------")
+    print(f"  MAT001   |  150  |     120      |     30    | PO1001: {_day(base, 40)} +100")
+    print(f"  MAT002   |  300  |     250      |     50    | PO1002: {_day(base, 45)} +200")
+    print(f"  MAT003   |   80  |      80      |      0    | PO1003: {_day(base, 50)} +150")
+    print(f"  MAT004   |   50  |     200      |   -150    | PO1004: {_day(base, 35)} +100")
+    print(f"           |       |              |           | PO1005: {_day(base, 45)} +120")
+    print(f"           |       |              |           | PO1006: {_day(base, 55)} +100")
+    print()
+    print("  Request bodies for the README test scenarios (POST /atp-check):")
+    for name, matnr, qty, days in TEST_REQUESTS:
+        body = {"matnr": matnr, "werks": "TW01", "requested_qty": qty,
+                "requested_date": _day(base, days)}
+        print(f"  {name:<36} {json.dumps(body)}")
     print()
     print("[setup] Done.")
 

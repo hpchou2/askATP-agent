@@ -295,6 +295,9 @@ def po_logistic_method_change(
     If stock − committed >= 0 from the start (no SO deficit), Phase 1 is skipped
     and switching begins with the very first PO.
 
+    All-or-nothing: if the POs cannot reach requested_qty, no PO is switched
+    and the database is left unchanged.
+
     Call this only after the Supervisor has confirmed that air shipping is
     permitted for the plant.
 
@@ -379,7 +382,14 @@ def po_logistic_method_change(
         if running >= requested_qty:
             covered = True
 
-    conn.commit()
+    if covered:
+        conn.commit()
+    else:
+        # Partial coverage doesn't solve the order — discard the switches so
+        # no PO is upgraded (and paid for) without fixing the shortage.
+        conn.rollback()
+        remaining_pos = [p["po_number"] for p in updated_pos] + remaining_pos
+        updated_pos = []
     conn.close()
 
     if covered:

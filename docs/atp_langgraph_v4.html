@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATP Fulfillment — Multi-Agent LangGraph</title>
+<style>
+/* ── DESIGN TOKENS — edit to retheme ─────────────────────────────── */
+:root {
+  /* Base palette — slate monochrome */
+  --ink:        #1A1F2E;
+  --ink-mid:    #374151;
+  --ink-muted:  #6B7280;
+  --ink-faint:  #9CA3AF;
+  --border:     #D1D5DB;
+  --border-lt:  #E5E7EB;
+  --surface:    #F4F6F9;
+  --white:      #FFFFFF;
+
+  /* Two semantic accents only */
+  --accent-policy: #2563EB;   /* blue — Policy Agent (LLM reasoning) */
+  --accent-hitl:   #B45309;   /* amber — human-in-the-loop points    */
+
+  /* Agent swimlanes: all same hue, varying lightness */
+  --ag-bg:      #F4F6F9;   /* fill — all lanes same */
+  --ag-border:  #C9D0DA;   /* stroke — all lanes same */
+  --ag-txt:     #374151;
+
+  /* Node fills — all near-white, differentiated by left-border accent */
+  --n-default-bg: #FFFFFF;
+  --n-default-b:  #C9D0DA;
+  --n-active-b:   #374151;   /* darker border for triage nodes */
+  --n-policy-b:   #2563EB;   /* blue border for policy node */
+  --n-hitl-b:     #B45309;   /* amber border for HITL nodes */
+  --n-success-b:  #374151;   /* same as active for execute/compose */
+  --n-danger-b:   #DC2626;   /* red for error/block/finance paths */
+
+  /* Arrow colors */
+  --a-main:  #6B7280;
+  --a-yes:   #4B5563;
+  --a-no:    #9CA3AF;
+  --a-esc:   #DC2626;
+  --a-skip:  #2563EB;
+  --a-hitl:  #B45309;
+
+  --radius: 8px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--surface); color: var(--ink); }
+
+/* ── HEADER ── */
+.hdr { background: var(--ink); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+.hdr-left h1 { font-size: 16px; font-weight: 600; color: #fff; letter-spacing: -.01em; }
+.hdr-left p  { font-size: 10px; color: #8B96AA; margin-top: 2px; }
+.hdr-badge { font-size: 9px; color: #8B96AA; border: 1px solid #3A4458; padding: 3px 9px; border-radius: 12px; letter-spacing: .04em; }
+
+/* ── TOOLBAR ── */
+.toolbar { background: var(--white); border-bottom: 1px solid var(--border-lt); padding: 8px 18px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mbtns  { display: flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.mbtn   { font-size: 11px; padding: 5px 13px; background: var(--white); cursor: pointer; color: var(--ink-mid); border: none; border-right: 1px solid var(--border); transition: background .12s; }
+.mbtn:last-child { border-right: none; }
+.mbtn.active { background: var(--ink); color: #fff; }
+.vsep   { width: 1px; height: 20px; background: var(--border-lt); }
+.leg    { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--ink-muted); cursor: pointer; user-select: none; }
+.ld     { width: 10px; height: 10px; border-radius: 2px; border: 1px solid var(--border); background: var(--surface); }
+
+/* ── LAYOUT ── */
+.wrap { display: flex; height: calc(100vh - 108px); }
+.graph-scroll { flex: 1; overflow: auto; padding: 16px; background: var(--surface); }
+
+/* ── SIDE PANEL ── */
+.side { width: 296px; min-width: 296px; border-left: 1px solid var(--border-lt); background: var(--white); overflow-y: auto; display: flex; flex-direction: column; }
+.side-tabs { display: none; border-bottom: 1px solid var(--border-lt); }
+.side-tabs.vis { display: flex; }
+.stab { flex: 1; font-size: 11px; padding: 8px; background: none; border: none; cursor: pointer; color: var(--ink-muted); border-bottom: 2px solid transparent; transition: all .12s; }
+.stab.active { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+.side-pane { padding: 14px; font-size: 11.5px; line-height: 1.6; display: none; }
+.side-pane.on { display: block; }
+.side-empty { padding: 16px 14px; color: var(--ink-faint); font-size: 11px; font-style: italic; }
+
+/* Panel elements */
+.p-name { font-family: 'SF Mono', Menlo, monospace; font-size: 10px; font-weight: 600; background: var(--ink); color: #fff; padding: 3px 8px; border-radius: 4px; display: inline-block; margin-bottom: 5px; }
+.p-cat  { font-size: 9px; color: var(--ink-faint); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; }
+.p-agent-badge { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; padding: 2px 7px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-mid); display: inline-block; margin-bottom: 6px; }
+.p-sec  { font-size: 9px; color: var(--ink-faint); font-weight: 600; text-transform: uppercase; letter-spacing: .07em; margin: 9px 0 3px; }
+.p-card { border-radius: 5px; padding: 8px 10px; font-size: 10.5px; line-height: 1.55; margin-bottom: 5px; }
+.p-desc  { background: var(--surface); border: 1px solid var(--border-lt); color: var(--ink-mid); }
+.p-input { background: var(--surface); border: 1px solid var(--border-lt); color: var(--ink-mid); }
+.p-out   { background: var(--surface); border: 1px solid var(--border-lt); color: var(--ink-mid); }
+.p-bapi  { background: var(--surface); border: 1px solid var(--border); color: var(--ink-mid); font-family: 'SF Mono', Menlo, monospace; font-size: 9px; }
+.p-tool  { background: var(--surface); border: 1px solid var(--border); color: var(--ink-mid); font-family: 'SF Mono', Menlo, monospace; font-size: 9px; }
+.p-policy-tag { background: #EFF6FF; border: 1px solid #BFDBFE; color: #1E40AF; font-size: 9px; font-family: 'SF Mono', Menlo, monospace; padding: 2px 6px; border-radius: 3px; display: inline-block; margin: 1px 2px; }
+
+.p-kv { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-bottom: 4px; }
+.p-kv tr { border-bottom: 1px solid var(--border-lt); }
+.p-kv tr:last-child { border-bottom: none; }
+.p-kv .kl { color: var(--ink-faint); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; padding: 5px 8px 5px 0; white-space: nowrap; vertical-align: top; width: 34%; }
+.p-kv .kv { color: var(--ink-mid); padding: 5px 0; }
+.p-kv .km { font-family: 'SF Mono', Menlo, monospace; font-size: 9px; color: var(--ink-mid); }
+.p-kv .ksub { font-family: 'SF Mono', Menlo, monospace; font-size: 9px; color: var(--ink-faint); }
+.logic-row { display: flex; gap: 6px; margin-bottom: 4px; font-size: 10.5px; }
+.logic-k { color: var(--ink-muted); font-weight: 600; flex-shrink: 0; width: 90px; font-size: 9.5px; }
+.logic-v { color: var(--ink-mid); }
+.p-logic { background: var(--surface); border: 1px solid var(--border-lt); border-radius: 5px; padding: 8px 10px; margin-bottom: 5px; }
+.edge-row { display: flex; align-items: flex-start; gap: 4px; margin-bottom: 3px; }
+.e-pill   { background: var(--surface); border: 1px solid var(--border); padding: 1px 6px; border-radius: 10px; font-size: 9px; font-family: 'SF Mono', Menlo, monospace; color: var(--ink-mid); flex-shrink: 0; }
+.e-pill.yes { background: #ECFDF5; border-color: #6EE7B7; color: #065F46; }
+.e-pill.no  { background: #FEF3C7; border-color: #FCD34D; color: #78350F; }
+.e-pill.esc { background: #FEF2F2; border-color: #FCA5A5; color: #7F1D1D; }
+.e-pill.hitl { background: #FFFBEB; border-color: #FCD34D; color: var(--accent-hitl); }
+.e-tgt { color: var(--ink-mid); font-size: 10.5px; }
+.code-sec  { font-size: 9px; font-weight: 700; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .06em; margin: 8px 0 3px; }
+.p-code    { display: block; background: #1C2333; color: #CDD6F4; font-family: 'SF Mono', Menlo, monospace; font-size: 9px; line-height: 1.6; padding: 8px 10px; border-radius: 5px; white-space: pre; overflow-x: auto; margin-bottom: 6px; }
+.algo-note { font-size: 9.5px; color: var(--ink-faint); font-style: italic; margin-bottom: 8px; }
+
+/* ── SVG NODE STYLES ── */
+.node { cursor: pointer; }
+.node > rect, .node > circle { transition: filter .12s; }
+.node:hover > rect, .node:hover > circle { filter: brightness(.95); }
+.node.sel > rect, .node.sel > circle { stroke-width: 2.5 !important; }
+svg text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+/* ── NODE CLASSES — monochrome with accent left-border effect ── */
+/* All nodes: white fill, slate border, dark text */
+.c-pre > rect, .c-pre > circle { fill: #FFFFFF; stroke: #C9D0DA; stroke-width: 1; }
+.c-pre .nth { fill: #374151; font-weight: 600; } .c-pre .nts { fill: #6B7280; }
+
+/* Triage / active nodes — slightly off-white, stronger border */
+.c-blue > rect  { fill: #F9FAFB; stroke: #4B5563; stroke-width: 1; }
+.c-blue .nth { fill: #111827; font-weight: 600; } .c-blue .nts { fill: #4B5563; }
+
+/* HITL nodes — amber-tinted border only */
+.c-amber > rect { fill: #FFFDF7; stroke: var(--accent-hitl); stroke-width: 1.5; }
+.c-amber .nth { fill: var(--accent-hitl); font-weight: 600; } .c-amber .nts { fill: var(--accent-hitl); }
+
+/* Success / execute / compose */
+.c-green > rect { fill: #F9FAFB; stroke: #4B5563; stroke-width: 1; }
+.c-green .nth { fill: #111827; font-weight: 600; } .c-green .nts { fill: #4B5563; }
+
+.c-teal > rect  { fill: #F9FAFB; stroke: #374151; stroke-width: 1; }
+.c-teal .nth { fill: #111827; font-weight: 600; } .c-teal .nts { fill: #4B5563; }
+
+/* Danger — red border for error/block paths */
+.c-red > rect   { fill: #FEF2F2; stroke: #DC2626; stroke-width: 1; }
+.c-red .nth { fill: #7F1D1D; font-weight: 600; } .c-red .nts { fill: #B91C1C; }
+
+/* Resolution deep-dive nodes */
+.c-purple > rect { fill: #F9FAFB; stroke: #4B5563; stroke-width: 1; }
+.c-purple .nth { fill: #111827; font-weight: 600; } .c-purple .nts { fill: #4B5563; }
+
+/* Policy node — blue accent, the key differentiator */
+.c-policy > rect { fill: #EFF6FF; stroke: var(--accent-policy); stroke-width: 1.5; }
+.c-policy .nth { fill: #1E3A8A; font-weight: 600; } .c-policy .nts { fill: #1D4ED8; }
+
+.nth { font-size: 12px; dominant-baseline: central; text-anchor: middle; }
+.nts { font-size: 10px; dominant-baseline: central; text-anchor: middle; }
+
+/* ── ARROWS — muted, purposeful ── */
+.a-main { stroke: #6B7280; stroke-width: 1.2; fill: none; }
+.a-yes  { stroke: #10B981; stroke-width: 1.1; fill: none; stroke-dasharray: 5 3; }
+.a-no   { stroke: #9CA3AF; stroke-width: 1.1; fill: none; stroke-dasharray: 4 3; }
+.a-esc  { stroke: #EF4444; stroke-width: 1.1; fill: none; stroke-dasharray: 4 3; }
+.a-skip { stroke: #0D9488; stroke-width: 1.1; fill: none; stroke-dasharray: 6 3; }
+.a-hitl { stroke: var(--accent-hitl); stroke-width: 1.1; fill: none; stroke-dasharray: 5 2; }
+
+.el     { font-size: 9px; }
+.el-y   { fill: #059669; } .el-n { fill: #6B7280; } .el-e { fill: #DC2626; } .el-s { fill: #0D9488; }
+.el-h   { fill: var(--accent-hitl); }
+
+.sl-label { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+
+/* Visibility toggles */
+body.dim-intake   .cat-intake   { opacity: .12; }
+body.dim-inv      .cat-inv      { opacity: .12; }
+body.dim-policy   .cat-policy   { opacity: .12; }
+body.dim-res      .cat-res      { opacity: .12; }
+body.dim-compose  .cat-compose  { opacity: .12; }
+
+/* Algorithm tab grouping */
+.algo-group { font-size: 9.5px; font-weight: 700; color: var(--ink); background: var(--surface); border-left: 3px solid var(--ink-mid); padding: 4px 8px; margin: 14px 0 6px; text-transform: uppercase; letter-spacing: .05em; }
+.algo-group:first-of-type { margin-top: 4px; }
+.src-tag { font-size: 8.5px; font-weight: 600; color: #1D4ED8; background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 3px; padding: 0 4px; margin-left: 4px; text-transform: none; letter-spacing: 0; }
+.side { width: 380px; min-width: 380px; }
+.impl-ref { margin-top: 16px; border: 1px dashed var(--border); border-radius: 6px; padding: 6px 8px; background: #FAFBFC; }
+.impl-ref > summary { cursor: pointer; font-size: 10px; font-weight: 700; color: var(--ink-muted); text-transform: uppercase; letter-spacing: .05em; list-style: none; }
+.impl-ref > summary::before { content: '▸ '; }
+.impl-ref[open] > summary::before { content: '▾ '; }
+.impl-ref[open] > summary { margin-bottom: 6px; }
+
+/* Mode switch */
+.mode-all  { display: none; max-width: 700px; }
+.mode-step { display: none; }
+body.view-step .mode-step { display: block; }
+body.view-all  .mode-all  { display: block; }
+.mode-step .nts { font-size: 9px; }
+</style>
+</head>
+<body class="view-step">
+
+<div class="hdr">
+  <div class="hdr-left">
+    <h1>ATP Fulfillment Agent — Multi-Agent LangGraph</h1>
+    <p>4-agent architecture · policy gate · HITL × 3 · streaming-ready</p>
+  </div>
+  <span class="hdr-badge">v4 · waterfall + parallel</span>
+</div>
+
+<div class="toolbar">
+  <div class="mbtns">
+    <button class="mbtn active" id="btn-step" onclick="setView('step')">Waterfall View</button>
+    <button class="mbtn" id="btn-all" onclick="setView('all')">Parallel View (asyncio)</button>
+  </div>
+  <div class="vsep"></div>
+  <span style="font-size:10px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Agents</span>
+  <label class="leg"><input type="checkbox" checked onchange="dimToggle(this,'dim-intake')">   <div class="ld" ></div>Intake</label>
+  <label class="leg"><input type="checkbox" checked onchange="dimToggle(this,'dim-inv')">      <div class="ld" ></div>Inventory</label>
+  <label class="leg"><input type="checkbox" checked onchange="dimToggle(this,'dim-policy')">   <div class="ld" ></div>Policy</label>
+  <label class="leg"><input type="checkbox" checked onchange="dimToggle(this,'dim-res')">      <div class="ld" ></div>Resolution</label>
+  <label class="leg"><input type="checkbox" checked onchange="dimToggle(this,'dim-compose')">  <div class="ld" ></div>Compose+HITL</label>
+  <div class="vsep"></div>
+  <span style="font-size:10px;color:#6B7280;display:flex;gap:10px;align-items:center">
+    <span><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#10B981" stroke-width="1.5" stroke-dasharray="5 3"/></svg> ok / feasible</span>
+    <span><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#9CA3AF" stroke-width="1.5" stroke-dasharray="4 3"/></svg> fallback</span>
+    <span><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#EF4444" stroke-width="1.5" stroke-dasharray="4 3"/></svg> block / escalate</span>
+    <span><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#0D9488" stroke-width="1.5" stroke-dasharray="6 3"/></svg> early exit</span>
+    <span><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#B45309" stroke-width="1.5" stroke-dasharray="5 2"/></svg> HITL loop</span>
+  </span>
+</div>
+
+<div class="wrap">
+<div class="graph-scroll">
+<svg class="mode-step" width="100%" viewBox="-40 0 730 1120" role="img">
+<title>ATP Multi-Agent LangGraph — Waterfall View</title>
+<defs>
+  <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1.5L8 5L2 8.5" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+</defs>
+<rect x="14" y="10" width="470" height="202" rx="12" fill="var(--ag-bg)" stroke="var(--ag-border)" stroke-width="1" stroke-dasharray="5 3"/>
+<text class="sl-label" x="26" y="28" fill="var(--ink-mid)">① INTAKE AGENT</text>
+<text style="font-size:9px" x="26" y="40" fill="var(--ink-mid)">parse · classify · credit check</text>
+<g class="node c-pre cat-intake" id="n-start" onclick="showNode('start')">
+  <circle cx="155" cy="66" r="18"/>
+  <text class="nth" x="155" y="66" style="font-size:11px;font-weight:600">START</text>
+</g>
+<line x1="155" y1="84" x2="155" y2="97" class="a-main" marker-end="url(#ar)"/>
+<g class="node c-pre cat-intake" id="n-credit" onclick="showNode('credit')">
+  <rect x="30" y="97" width="250" height="44" rx="8"/>
+  <text class="nth" x="155.0" y="115">check_credit_hold</text>
+  <text class="nts" x="155.0" y="130">VKM1 · VBUK.CMGST · pre-waterfall gate</text>
+</g>
+<path d="M280,119 L322,119" class="a-esc" marker-end="url(#ar)"/>
+<text class="el el-e" x="283" y="113" style="font-size:7.5px">blocked</text>
+<g class="node c-red cat-intake" id="n-finance" onclick="showNode('finance')">
+  <rect x="322" y="104" width="144" height="34" rx="7"/>
+  <text class="nth" x="394.0" y="121" style="font-size:10.5px">Finance notify · HOLD</text>
+</g>
+<line x1="155" y1="141" x2="155" y2="154" class="a-main" marker-end="url(#ar)"/>
+<g class="node c-pre cat-intake" id="n-parse" onclick="showNode('parse')">
+  <rect x="30" y="154" width="250" height="44" rx="8"/>
+  <text class="nth" x="155.0" y="172">parse_request</text>
+  <text class="nts" x="155.0" y="187">PULL_IN vs OVER_COMMIT · LLM tool_use · ≤3 retries</text>
+</g>
+<path d="M30,176 L14,176 L14,192 L30,192" class="a-no" marker-end="url(#ar)"/>
+<text class="el el-n" x="14" y="207" style="font-size:8px" text-anchor="middle">retry</text>
+<line x1="155" y1="198" x2="155" y2="224" class="a-main" marker-end="url(#ar)"/>
+<text class="el el-n" x="166" y="214" style="font-size:9px">request_df →</text>
+<rect x="14" y="224" width="470" height="280" rx="12" fill="var(--ag-bg)" stroke="var(--ag-border)" stroke-width="1" stroke-dasharray="5 3"/>
+<text class="sl-label" x="26" y="242" fill="var(--ink-mid)">② INVENTORY AGENT</text>
+<text style="font-size:9px" x="26" y="254" fill="var(--ink-mid)">CO9 · MMBE · shipping schedule — tools run in parallel (asyncio)</text>
+<g class="node c-blue cat-inv" id="n-s01" onclick="showNode('s01')">
+  <rect x="30" y="262" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="281">01 · check_dest_atp</text>
+  <text class="nts" x="175.0" y="298">CO9 WUNSCH_DATE=req_date · QM02/QMEL block check</text>
+</g>
+<path d="M30,286 L-6,286 L-6,1016 L30,1016" class="a-skip" marker-end="url(#ar)"/>
+<text class="el el-s" x="-20" y="266" style="font-size:7.5px" text-anchor="middle">ATP</text>
+<text class="el el-s" x="-20" y="276" style="font-size:7.5px" text-anchor="middle">ok</text>
+<text class="el el-s" x="-20" y="286" style="font-size:7.5px" text-anchor="middle">AUTO</text>
+<text class="el el-s" x="-20" y="296" style="font-size:7.5px" text-anchor="middle">→</text>
+<line x1="175" y1="310" x2="175" y2="324" class="a-main" marker-end="url(#ar)"/>
+<g class="node c-pre cat-inv" id="n-seacheck" onclick="showNode('seacheck')">
+  <rect x="30" y="324" width="290" height="44" rx="8"/>
+  <text class="nth" x="175.0" y="342">check_open_sea_order</text>
+  <text class="nts" x="175.0" y="357">OI-02 gate: air = mode upgrade only · EKPO · LIPS</text>
+</g>
+<path d="M320,346 L470,346 L470,516" class="a-no" marker-end="url(#ar)"/>
+<text class="el el-n" x="326" y="340" style="font-size:8.5px">no sea → skip S02</text>
+<line x1="175" y1="368" x2="175" y2="382" class="a-main" marker-end="url(#ar)"/>
+<g class="node c-blue cat-inv" id="n-s02" onclick="showNode('s02')">
+  <rect x="30" y="382" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="401">02 · check_shipping</text>
+  <text class="nts" x="175.0" y="418">Shipping schedule · 4 candidate routes · air cutoff check</text>
+</g>
+<path d="M320,406 L446,406 L446,516" class="a-no" marker-end="url(#ar)"/>
+<text class="el el-n" x="326" y="400" style="font-size:8.5px">not feasible → S03</text>
+<line x1="175" y1="430" x2="175" y2="444" class="a-main" marker-end="url(#ar)"/>
+<g class="node c-amber cat-inv" id="n-airform" onclick="showNode('airform')">
+  <rect x="30" y="444" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="463">collect_air_form  ⚡ HITL-1</text>
+  <text class="nts" x="175.0" y="480">INTERRUPT · cost center · approver · OI-05 risk</text>
+</g>
+<rect x="31" y="441" width="66" height="10" rx="3" fill="#FEF2F2" stroke="#DC2626" stroke-width="0.5"/>
+<text x="64" y="448.5" font-size="7" fill="#DC2626" text-anchor="middle">OI-05 · MED</text>
+<path d="M320,468 L446,468" class="a-no"/>
+<text class="el el-n" x="326" y="462" style="font-size:8.5px">abandoned → S03</text>
+<line x1="175" y1="504" x2="175" y2="516" class="a-main" marker-end="url(#ar)"/>
+<text class="el el-n" x="186" y="513" style="font-size:9px">options_df →</text>
+<rect x="14" y="516" width="470" height="130" rx="12" fill="#EFF6FF" stroke="var(--accent-policy)" stroke-width="1.5" stroke-dasharray="5 3"/>
+<text class="sl-label" x="26" y="534" fill="var(--accent-policy)">③ POLICY AGENT  ★ NEW</text>
+<text style="font-size:9px" x="26" y="546" fill="var(--accent-policy)">LLM reads atp_policy.txt · evaluates every option · BLOCK or FLAG before resolution</text>
+<g class="node c-policy cat-policy" id="n-policy" onclick="showNode('policy')">
+  <rect x="30" y="554" width="430" height="76" rx="8"/>
+  <text class="nth" x="245" y="578">evaluate_policy(options_df, policy.txt)</text>
+  <text class="nts" x="245" y="596">MFG-01 LT floor · AIR-01 cost-benefit · RWK-01 MOQ+T-type · INV-01 QI block</text>
+  <text class="nts" x="245" y="612">INV-03 LTB sell-through · ORD-01 credit · EDG-01 partial fill threshold</text>
+</g>
+<path d="M460,592 L490,592 L490,1030 L470,1030" class="a-esc" marker-end="url(#ar)"/>
+<text class="el el-e" x="494" y="588" style="font-size:8px">BLOCK → compose</text>
+<line x1="245" y1="646" x2="245" y2="662" class="a-main" marker-end="url(#ar)"/>
+<text class="el el-n" x="256" y="658" style="font-size:9px">PASS/FLAG options →</text>
+<rect x="14" y="662" width="470" height="290" rx="12" fill="var(--ag-bg)" stroke="var(--ag-border)" stroke-width="1" stroke-dasharray="5 3"/>
+<text class="sl-label" x="26" y="680" fill="var(--ink-mid)">④ RESOLUTION AGENT</text>
+<text style="font-size:9px" x="26" y="692" fill="var(--ink-mid)">WO expedite · rework · shortage — only options that passed policy</text>
+<g class="node c-blue cat-res" id="n-s03" onclick="showNode('s03')">
+  <rect x="30" y="700" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="719">03 · check_inventory</text>
+  <text class="nts" x="175.0" y="736">CO9 all plants · MMBE · split_qty = min(needed−covered, atp)</text>
+</g>
+<path d="M320,724 L360,724 L360,810 L500,810" class="a-yes" marker-end="url(#ar)"/>
+<text class="el el-y" x="326" y="718" style="font-size:8.5px">STO ok</text>
+<line x1="175" y1="748" x2="175" y2="762" class="a-main" marker-end="url(#ar)"/>
+<text class="el el-n" x="184" y="758" style="font-size:8.5px"></text>
+<g class="node c-purple cat-res" id="n-s04" onclick="showNode('s04')">
+  <rect x="30" y="762" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="781">04 · check_wo_expedite</text>
+  <text class="nts" x="175.0" y="798">CO3 · MES yield · output_qty = WO_qty × yield_rate</text>
+</g>
+<path d="M320,786 L376,786 L376,820 L500,820" class="a-yes" marker-end="url(#ar)"/>
+<text class="el el-y" x="326" y="780" style="font-size:8.5px">yes / GATE</text>
+<line x1="175" y1="810" x2="175" y2="824" class="a-main" marker-end="url(#ar)"/>
+<g class="node c-purple cat-res" id="n-s05" onclick="showNode('s05')">
+  <rect x="30" y="824" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="843">05 · check_rework</text>
+  <text class="nts" x="175.0" y="860">CS03 · MB52 · MOQ: MARC.MINBS / EINA.MINBM · PM GATE</text>
+</g>
+<path d="M320,848 L392,848 L392,834 L500,834" class="a-yes" marker-end="url(#ar)"/>
+<text class="el el-y" x="326" y="842" style="font-size:8.5px">alt ok → PM</text>
+<line x1="175" y1="872" x2="175" y2="886" class="a-main" marker-end="url(#ar)"/>
+<g class="node c-red cat-res" id="n-s06" onclick="showNode('s06')">
+  <rect x="30" y="886" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="905">06 · check_shortage</text>
+  <text class="nts" x="175.0" y="922">CS03 BOM · SRM · root-cause → routed escalation</text>
+</g>
+<text class="el el-n" x="330" y="893" style="font-size:7.5px">IQC → QM</text>
+<text class="el el-n" x="330" y="902" style="font-size:7.5px">supplier → Sourcing</text>
+<text class="el el-n" x="330" y="911" style="font-size:7.5px">customs → Logistics</text>
+<text class="el el-n" x="330" y="920" style="font-size:7.5px">BOM → Eng/PLM</text>
+<path d="M320,928 L400,928 L400,994" class="a-esc" marker-end="url(#ar)"/>
+<text class="el el-e" x="406" y="943" style="font-size:8px">ESCALATE</text>
+<g class="node c-amber cat-res" id="n-rta" onclick="showNode('rta')">
+  <rect x="500" y="790" width="148" height="68" rx="8"/>
+  <text class="nth" x="574" y="818">route_to</text>
+  <text class="nth" x="574" y="838">_approval  HITL-2</text>
+</g>
+<line x1="574" y1="858" x2="574" y2="874" class="a-yes" marker-end="url(#ar)"/>
+<text class="el el-y" x="585" y="870" style="font-size:8px">approved</text>
+<g class="node c-green cat-res" id="n-exec" onclick="showNode('exec')">
+  <rect x="500" y="874" width="148" height="44" rx="8"/>
+  <text class="nth" x="574.0" y="892">execute_action</text>
+  <text class="nts" x="574.0" y="907">STO · air · rework</text>
+</g>
+<path d="M648,824 L670,824 L670,970 L458,970 L458,994" class="a-esc" marker-end="url(#ar)"/>
+<text class="el el-e" x="652" y="816" style="font-size:7.5px">rejected</text>
+<path d="M574,918 L574,964 L440,964 L440,994" class="a-yes" marker-end="url(#ar)"/>
+<line x1="245" y1="952" x2="245" y2="994" class="a-main" marker-end="url(#ar)"/>
+<text class="el el-n" x="252" y="946" style="font-size:9px">ranked_actions →</text>
+<rect x="14" y="956" width="650" height="148" rx="12" fill="var(--ag-bg)" stroke="var(--ag-border)" stroke-width="1" stroke-dasharray="5 3"/>
+<text class="sl-label" x="26" y="974" fill="var(--ink-mid)">⑤ COMPOSE + HITL AGENT</text>
+<text style="font-size:9px" x="26" y="986" fill="var(--ink-mid)">stream → HITL-3 → execute → audit → END</text>
+<g class="node c-teal cat-compose" id="n-compose" onclick="showNode('compose')">
+  <rect x="30" y="994" width="440" height="44" rx="8"/>
+  <text class="nth" x="250.0" y="1012">compose_response</text>
+  <text class="nts" x="250.0" y="1027">stream · qty · commit_date · confidence · policy_flags · ranked ★</text>
+</g>
+<path d="M470,1016 L510,1016" class="a-hitl" marker-end="url(#ar)"/>
+<g class="node c-amber cat-compose" id="n-hitl3" onclick="showNode('hitl3')">
+  <rect x="510" y="994" width="138" height="64" rx="8"/>
+  <text class="nth" x="579" y="1014">HITL-3 ⚡</text>
+  <text class="nts" x="579" y="1031">confirm / reject</text>
+  <text class="nts" x="579" y="1044">/ alternatives</text>
+</g>
+<path d="M579,998 L579,982 L300,982 L300,954" class="a-hitl" marker-end="url(#ar)"/>
+<text class="el el-h" x="476" y="978" style="font-size:8px">reject / alternatives</text>
+<text class="el el-h" x="476" y="992" style="font-size:8px">→ re-enter Resolution</text>
+<line x1="180" y1="1038" x2="180" y2="1050" class="a-main" marker-end="url(#ar)"/>
+<g class="node c-pre cat-compose" id="n-audit" onclick="showNode('audit')">
+  <rect x="30" y="1050" width="300" height="46" rx="8"/>
+  <text class="nth" x="180.0" y="1068">write_audit_log</text>
+  <text class="nts" x="180.0" y="1084">always · append-only · immutable · PostgreSQL</text>
+</g>
+<line x1="330" y1="1073" x2="350" y2="1073" class="a-main" marker-end="url(#ar)"/>
+<g class="node c-pre cat-compose" id="n-end" onclick="showNode('end')">
+  <rect x="350" y="1058" width="80" height="30" rx="15"/>
+  <text class="nth" x="390.0" y="1073" style="font-size:11px;font-weight:600">END</text>
+</g>
+</svg>
+
+<svg class="mode-all" width="100%" viewBox="0 0 580 740" role="img">
+<title>ATP Agent LangGraph — ALL/parallel mode</title>
+<defs>
+  <marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1.5L8 5L2 8.5" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+</defs>
+
+<!-- ALL MODE header note -->
+<rect x="88" y="10" width="404" height="22" rx="5" fill="#EFF6FF" stroke="#3B82F6" stroke-width="0.5"/>
+<text x="290" y="22" font-size="10" fill="#1E40AF" font-weight="500" text-anchor="middle">asyncio.gather — all steps run simultaneously · Step 01 early-exit still applies</text>
+
+<!-- START -->
+<g class="node c-pre cat-intake" onclick="showNode('start')">
+  <circle cx="290" cy="48" r="18"/>
+  <text class="nth" x="290" y="48" style="font-size:11px;font-weight:600">START</text>
+</g>
+<line x1="290" y1="66" x2="290" y2="80" class="a-main" marker-end="url(#ar2)"/>
+
+<!-- PRE-CHECKS -->
+<g class="node c-pre cat-intake" onclick="showNode('credit')">
+  <rect x="120" y="80" width="340" height="48" rx="9"/>
+  <text class="nth" x="290" y="100">check_credit_hold · parse_request</text>
+  <text class="nts" x="290" y="117">VKM1 · classify PULL_IN vs OVER_COMMIT</text>
+</g>
+<line x1="290" y1="128" x2="290" y2="142" class="a-main" marker-end="url(#ar2)"/>
+
+<!-- STEP 01 early exit check -->
+<g class="node c-blue cat-inv" onclick="showNode('s01')">
+  <rect x="120" y="142" width="340" height="42" rx="9"/>
+  <text class="nth" x="290" y="163">01 · check_dest_atp + QMS block · early exit?</text>
+</g>
+<!-- early exit right -->
+<path d="M460,163 L510,163 L510,616 L462,616" class="a-skip" marker-end="url(#ar2)"/>
+<text class="el" x="514" y="159" fill="#0D9488" style="font-size:8px">ATP ok</text>
+<text class="el" x="514" y="169" fill="#0D9488" style="font-size:8px">AUTO</text>
+<line x1="290" y1="184" x2="290" y2="198" class="a-main" marker-end="url(#ar2)"/>
+
+<!-- GATHER label bar -->
+<rect x="64" y="198" width="452" height="20" rx="4" fill="#EFF6FF" stroke="#3B82F6" stroke-width="0.5"/>
+<text x="290" y="210" text-anchor="middle" font-size="10" fill="#1E40AF" font-weight="600">asyncio.gather — all steps simultaneously</text>
+
+<!-- fan-out lines -->
+<line x1="290" y1="218" x2="92" y2="218" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="290" y1="218" x2="488" y2="218" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="92" y1="218" x2="92" y2="234" class="a-main" marker-end="url(#ar2)"/>
+<line x1="188" y1="218" x2="188" y2="234" class="a-main" marker-end="url(#ar2)"/>
+<line x1="284" y1="218" x2="284" y2="234" class="a-main" marker-end="url(#ar2)"/>
+<line x1="380" y1="218" x2="380" y2="234" class="a-main" marker-end="url(#ar2)"/>
+<line x1="488" y1="218" x2="488" y2="234" class="a-main" marker-end="url(#ar2)"/>
+
+<!-- 5 step boxes -->
+<g class="node c-blue cat-inv" onclick="showNode('s02')">
+  <rect x="54" y="234" width="86" height="62" rx="7"/>
+  <text class="nth" x="97" y="254" style="font-size:11px">Step 02</text>
+  <text class="nts" x="97" y="271">Air</text>
+  <text class="nts" x="97" y="286">Sched.</text>
+</g>
+<g class="node c-blue cat-inv" onclick="showNode('s03')">
+  <rect x="150" y="234" width="86" height="62" rx="7"/>
+  <text class="nth" x="193" y="254" style="font-size:11px">Step 03</text>
+  <text class="nts" x="193" y="271">Inventory</text>
+  <text class="nts" x="193" y="286">CO9+MMBE</text>
+</g>
+<g class="node c-blue cat-inv" onclick="showNode('s04')">
+  <rect x="246" y="234" width="86" height="62" rx="7"/>
+  <text class="nth" x="289" y="254" style="font-size:11px">Step 04</text>
+  <text class="nts" x="289" y="271">WO expedite</text>
+  <text class="nts" x="289" y="286">yield check</text>
+</g>
+<g class="node c-blue cat-inv" onclick="showNode('s05')">
+  <rect x="342" y="234" width="86" height="62" rx="7"/>
+  <text class="nth" x="385" y="254" style="font-size:11px">Step 05</text>
+  <text class="nts" x="385" y="271">Rework</text>
+  <text class="nts" x="385" y="286">MARC/EINA</text>
+</g>
+<g class="node c-blue cat-inv" onclick="showNode('s06')">
+  <rect x="438" y="234" width="86" height="62" rx="7"/>
+  <text class="nth" x="481" y="254" style="font-size:11px">Step 06</text>
+  <text class="nts" x="481" y="271">Shortage</text>
+  <text class="nts" x="481" y="286">root cause</text>
+</g>
+
+<!-- ordering issue note -->
+
+
+<!-- fan-in lines -->
+<line x1="92" y1="310" x2="92" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="193" y1="310" x2="193" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="289" y1="310" x2="289" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="385" y1="310" x2="385" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="481" y1="310" x2="481" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="92" y1="332" x2="481" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="290" y1="332" x2="290" y2="346" class="a-main" marker-end="url(#ar2)"/>
+
+<!-- options_df collector -->
+<g class="node c-amber cat-res" onclick="showNode('optdf')">
+  <rect x="100" y="346" width="380" height="52" rx="9"/>
+  <text class="nth" x="290" y="366">options_df collector</text>
+  <text class="nts" x="290" y="384">one row/step · WO rows use output_qty_forecast · split_qty validated</text>
+</g>
+<line x1="290" y1="398" x2="290" y2="412" class="a-main" marker-end="url(#ar2)"/>
+
+<!-- rank_options -->
+<g class="node c-amber cat-res" onclick="showNode('rank')">
+  <rect x="90" y="412" width="400" height="52" rx="9"/>
+  <text class="nth" x="290" y="432">rank_options(df)</text>
+  <text class="nts" x="290" y="450">cost_usd ASC · confidence DESC (yield-adjusted) · eta_at_dest ASC</text>
+</g>
+<line x1="290" y1="464" x2="290" y2="478" class="a-main" marker-end="url(#ar2)"/>
+
+<!-- options_ranked_df preview -->
+<rect x="90" y="478" width="400" height="78" rx="7" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="0.75"/>
+<text x="108" y="494" font-size="9.5" fill="#374151" font-weight="600">options_ranked_df — qty + commit_date + confidence always shown</text>
+<rect x="98" y="500" width="384" height="16" rx="2" fill="#E5E7EB"/>
+<text x="112" y="511" font-size="8.5" fill="#374151">rank</text><text x="158" y="511" font-size="8.5" fill="#374151">step</text><text x="210" y="511" font-size="8.5" fill="#374151">qty</text><text x="260" y="511" font-size="8.5" fill="#374151">commit_date</text><text x="356" y="511" font-size="8.5" fill="#374151">cost_usd</text><text x="430" y="511" font-size="8.5" fill="#374151">action</text>
+<rect x="98" y="516" width="384" height="15" rx="1" fill="#DCFCE7" stroke="#86EFAC" stroke-width="0.4"/>
+<text x="112" y="526" font-size="8" fill="#14532D">1 ★</text><text x="158" y="526" font-size="8" fill="#14532D">03-STO</text><text x="210" y="526" font-size="8" fill="#14532D">100</text><text x="260" y="526" font-size="8" fill="#14532D">Jun 11</text><text x="356" y="526" font-size="8" fill="#14532D">1,200</text><text x="430" y="526" font-size="8" fill="#14532D">PROPOSE</text>
+<rect x="98" y="531" width="384" height="15" rx="1" fill="#FEF2F2"/>
+<text x="112" y="541" font-size="8" fill="#7F1D1D">—</text><text x="158" y="541" font-size="8" fill="#7F1D1D">06-ESC</text><text x="210" y="541" font-size="8" fill="#7F1D1D">0</text><text x="260" y="541" font-size="8" fill="#7F1D1D">null</text><text x="356" y="541" font-size="8" fill="#7F1D1D">—</text><text x="430" y="541" font-size="8" fill="#7F1D1D">ESCALATE</text>
+<text x="108" y="556" font-size="8" fill="#9CA3AF">* WO rows: qty = output_qty_forecast (WO_qty × yield_rate)  † confidence yield-adjusted</text>
+<line x1="290" y1="556" x2="290" y2="570" class="a-main" marker-end="url(#ar2)"/>
+
+<!-- compose_response -->
+<g class="node c-teal cat-compose" onclick="showNode('compose')">
+  <rect x="100" y="570" width="380" height="52" rx="9"/>
+  <text class="nth" x="290" y="590">compose_response</text>
+  <text class="nts" x="290" y="608">P1 ★ recommended · P2 optional · ESCALATE routed by root-cause</text>
+</g>
+<line x1="290" y1="622" x2="290" y2="636" class="a-main" marker-end="url(#ar2)"/>
+
+<!-- audit + END -->
+<g class="node c-pre cat-compose" onclick="showNode('audit')">
+  <rect x="150" y="636" width="280" height="42" rx="9"/>
+  <text class="nth" x="290" y="658">write_audit_log → END</text>
+</g>
+
+</svg>
+
+</div><!-- graph-scroll -->
+
+<!-- ══════════════ SIDE PANEL ══════════════ -->
+<div class="side">
+  <div class="side-tabs" id="side-tabs">
+    <button class="stab active" id="tab-overview" onclick="switchTab('overview')">Overview</button>
+    <button class="stab" id="tab-algo" onclick="switchTab('algo')">Algorithm</button>
+  </div>
+  <div id="side-empty" class="side-empty">Click any node or agent block to view description, inputs, SAP BAPIs, policy links, and outgoing edges.</div>
+  <div class="side-pane on" id="side-body"></div>
+  <div class="side-pane" id="side-algo"></div>
+</div>
+
+</div><!-- wrap -->
+
+<script>
+/* ─── NODE DATA ─── (all original nodes preserved + new ones) */
+const AGENT_COLORS = {
+  intake:  {bg:'var(--ag-bg)', b:'var(--ag-border)', txt:'var(--ag-txt)', label:'① INTAKE'},
+  inv:     {bg:'var(--ag-bg)', b:'var(--ag-border)', txt:'var(--ag-txt)', label:'② INVENTORY'},
+  policy:  {bg:'#EFF6FF', b:'var(--accent-policy)', txt:'var(--accent-policy)', label:'③ POLICY'},
+  res:     {bg:'var(--ag-bg)', b:'var(--ag-border)', txt:'var(--ag-txt)', label:'④ RESOLUTION'},
+  compose: {bg:'var(--ag-bg)', b:'var(--ag-border)', txt:'var(--ag-txt)', label:'⑤ COMPOSE+HITL'},
+  hitl: {bg:'#FFFDF7', b:'var(--accent-hitl)', txt:'var(--accent-hitl)', label:'HITL'},
+};
+
+const N = {
+ "start": {
+  "name": "START",
+  "cat": "SYSTEM · ENTRY POINT",
+  "desc": "LangGraph graph entry. Fires when a pull-in request arrives via WebSocket (human trigger) or when SAP CO9 monitoring detects an ATP-slip event (system trigger).",
+  "inputs": "WebSocket message or SAP event payload",
+  "bapi": [],
+  "tools": [],
+  "outputs": "Triggers check_credit_hold",
+  "edges": [
+   {
+    "l": "→",
+    "cls": "",
+    "t": "check_credit_hold"
+   }
+  ],
+  "agent": "intake",
+  "algo": "<div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8</div>\n<div class=\"code-sec\">Revised LangGraph Flow — SINGLE / BATCH trigger <span class=\"src-tag\">Design Memo v0.8 §5</span></div><code class=\"p-code\">TRIGGER\n   |\n   ├── mode = BATCH ──────────────────────────────────────────────────┐\n   └── mode = SINGLE ─────────────────────────────────────────────┐  |\n                                                                   |  |\n   ┌───────────────────────────────────────────────────────────────┘  |\n   |                                                    [BATCH]        |\n   ▼                                               reprioritize ◄──────┘\ncheck_credit_hold                                  _backorders\n   |                                               (Layer 1: Tool 4)   |\n   ▼                                                                   |\nparse_request  ◄── [Phase 2: LLM node]  ◄─────────────────────────────┘\n   |  Phase 1: structured input assumed (SAP event trigger)\n   |  Phase 2: LLM parses natural language order request\n   ▼\ncheck_dest_atp\n   |  Layer 1: fetch_available_stock()\n   |  → sets stock_sufficient, stock_nodes\n   |\n   ├── stock_sufficient = TRUE ─────────────────────────────────────┐\n   └── stock_sufficient = FALSE                                      |\n          |                                                          |\n          ▼                                                          |\n   check_open_sea_order                                              |\n          |  Layer 1: fetch_sto_nodes() — in-transit branch         |\n          ▼                                                          |\n   check_shipping                                                    |\n          |  Layer 1: fetch_sto_nodes() — not-yet-shipped branch    |\n          ▼                                                          |\n   check_inventory  ◄──────────────────────────────────────────────┘\n          |  Layer 1: find_fastest_atp_route()\n          |  → sets route_result, trunk_satisfied\n          |\n          ├── trunk_satisfied = TRUE ──────────────────────────────┐\n          └── trunk_satisfied = FALSE                               |\n                 |                                                  |\n                 ▼                                                  |\n          check_rework  (Step 04)                                  |\n                 |  Layer 1: check_rework_pool()                   |\n                 ▼                                                  |\n          check_wo_expedite  (Step 05)                             |\n                 |  Layer 1: check_wo_expedite()                   |\n                 ▼                                                  |\n          check_shortage  (Step 06)  ◄───────────────────────────┘\n                 |  Evaluate shortfall_qty\n                 ▼\n          compose_response\n                 |  Layer 1: propose_fulfillment_action()\n                 |  Phase 1: direct call → structured dict output\n                 |  Phase 2: LLM calls as tool → narrative output to planner\n                 ▼\n          write_audit_log\n                 ▼\n               END</code>\n<div class=\"code-sec\">Conditional edges <span class=\"src-tag\">Design Memo v0.8 §5.1</span></div><code class=\"p-code\">After check_dest_atp   stock_sufficient = TRUE   → Skip to check_inventory (bypass STO steps)\nAfter check_dest_atp   stock_sufficient = FALSE  → check_open_sea_order → check_shipping → check_inventory\nAfter check_inventory  trunk_satisfied = TRUE    → Skip to check_shortage (escalation bypassed)\n                       (status OK, no LATE)\nAfter check_inventory  trunk_satisfied = FALSE   → check_rework → check_wo_expedite → check_shortage\n                       (LATE or PARTIAL)\nTrigger                mode = BATCH              → reprioritize_backorders → then joins at parse_request\nTrigger                mode = SINGLE             → Direct to check_credit_hold</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (3)</summary>\n<div class=\"code-sec\">Graph Definition (simplified) <span class=\"src-tag\">Tech Spec v6 §2.3</span></div><code class=\"p-code\">from langgraph.graph import StateGraph, END\nfrom langgraph.checkpoint.aio import AsyncPostgresSaver\n\nbuilder = StateGraph(ATPAgentState)\n\n# Add nodes\nbuilder.add_node(&#x27;parse_request&#x27;,     parse_request_node)\nbuilder.add_node(&#x27;check_shipping&#x27;,    check_shipping_node)\nbuilder.add_node(&#x27;collect_air_form&#x27;,  collect_air_form_node)   # interrupt\nbuilder.add_node(&#x27;check_inventory&#x27;,   check_inventory_node)\nbuilder.add_node(&#x27;check_rework&#x27;,      check_rework_node)\nbuilder.add_node(&#x27;check_wo&#x27;,          check_wo_node)\nbuilder.add_node(&#x27;check_shortage&#x27;,    check_shortage_node)\nbuilder.add_node(&#x27;route_to_approval&#x27;, route_to_approval_node)  # interrupt\nbuilder.add_node(&#x27;execute_action&#x27;,    execute_action_node)\nbuilder.add_node(&#x27;compose_response&#x27;,  compose_response_node)\n\n# Set entry\nbuilder.set_entry_point(&#x27;parse_request&#x27;)\nbuilder.add_conditional_edges(&#x27;parse_request&#x27;, parse_router, {\n    &#x27;fields_ok&#x27;:      &#x27;check_shipping&#x27;,\n    &#x27;missing_fields&#x27;: &#x27;parse_request&#x27;,  # loop until all fields collected\n})\nbuilder.add_conditional_edges(&#x27;collect_air_form&#x27;, air_form_router, {\n    &#x27;form_complete&#x27;:  &#x27;route_to_approval&#x27;,\n    &#x27;air_gate_fail&#x27;:  &#x27;check_inventory&#x27;,  # cost exceeds threshold; fall through\n})\n\n# Conditional edges (triage waterfall)\nbuilder.add_conditional_edges(&#x27;check_shipping&#x27;, shipping_router, {\n    &#x27;air_feasible&#x27;:  &#x27;collect_air_form&#x27;,\n    &#x27;no_air&#x27;:        &#x27;check_inventory&#x27;,\n})\nbuilder.add_conditional_edges(&#x27;check_inventory&#x27;, inventory_router, {\n    &#x27;sto_feasible&#x27;:  &#x27;route_to_approval&#x27;,\n    &#x27;no_sto&#x27;:        &#x27;check_rework&#x27;,\n})\nbuilder.add_conditional_edges(&#x27;check_rework&#x27;, rework_router, {\n    &#x27;rework_feasible&#x27;:&#x27;route_to_approval&#x27;,\n    &#x27;no_rework&#x27;:     &#x27;check_wo&#x27;,\n})\nbuilder.add_conditional_edges(&#x27;check_wo&#x27;, wo_router, {\n    &#x27;expedite_ok&#x27;:   &#x27;route_to_approval&#x27;,\n    &#x27;no_expedite&#x27;:   &#x27;check_shortage&#x27;,\n})\nbuilder.add_edge(&#x27;check_shortage&#x27;,    &#x27;compose_response&#x27;)  # ESCALATE — no approval queue, direct to response\nbuilder.add_edge(&#x27;execute_action&#x27;,    &#x27;compose_response&#x27;)\nbuilder.add_edge(&#x27;compose_response&#x27;,  END)\n\n# Human interrupt nodes\ngraph = builder.compile(\n    checkpointer=AsyncPostgresSaver(conn),\n    interrupt_before=[&#x27;collect_air_form&#x27;, &#x27;route_to_approval&#x27;],\n)</code>\n<div class=\"code-sec\">ATPAgentState — TypedDict <span class=\"src-tag\">Tech Spec v6 §2.1</span></div><code class=\"p-code\">from typing import TypedDict, Literal, Optional, List\nfrom datetime import datetime\n\nclass ATPAgentState(TypedDict):\n    # ── Input ──────────────────────────────────────────────\n    request_id:        str\n    trigger_type:      Literal[&#x27;HUMAN&#x27;, &#x27;SYSTEM&#x27;]\n    raw_input:         str\n    mode:              Literal[&#x27;STEP&#x27;, &#x27;ALL&#x27;]\n\n    # ── Parsed request ─────────────────────────────────────\n    order_id:          Optional[str]\n    pn:                Optional[str]\n    qty:               Optional[int]\n    requested_date:    Optional[str]          # ISO 8601 — destination factory arrival date (GR-inclusive). Same dimension as current_commit.\n    current_commit:    Optional[str]\n    requester_id:      Optional[str]\n\n    # ── Triage results (populated as waterfall progresses) ─\n    shipping_result:   Optional[dict]         # Step 02\n    inventory_result:  Optional[dict]         # Step 03\n    rework_result:     Optional[dict]         # Step 04\n    wo_result:         Optional[dict]         # Step 05\n    shortage_result:   Optional[dict]         # Step 06\n\n    # ── Human form collection ──────────────────────────────\n    air_form:          Optional[dict]         # Collected fields\n    air_form_complete: bool                   # All required fields present\n    sto_form:          Optional[dict]\n    pending_approval:  Optional[str]          # approval_id in queue\n\n    # ── Resolution ─────────────────────────────────────────\n    resolution_path:   Optional[str]          # &#x27;02&#x27;,&#x27;03&#x27;,&#x27;04&#x27;,&#x27;05&#x27;,&#x27;06&#x27;,&#x27;ESCALATE&#x27;\n    commit_date:       Optional[str]\n    confidence_score:  Optional[float]\n    binding_constraint:Optional[str]\n    risk_flags:        List[dict]\n    action_required:   Optional[str]          # AUTO/PROPOSE/GATE/ESCALATE\n\n    # ── Metadata ───────────────────────────────────────────\n    data_freshness:    dict                   # {system: timestamp}\n    triage_step:       int                    # current waterfall step\n    errors:            List[str]\n    created_at:        str\n    updated_at:        str</code>\n<div class=\"code-sec\">State Schema — Layer 1 outputs · what-if · batch <span class=\"src-tag\">Design Memo v0.8 §6.5</span></div><code class=\"p-code\">class ATPAgentState(TypedDict):\n    # ── Trigger &amp; order ─────────────────────────────────────────\n    mode:               Literal[&#x27;single&#x27;, &#x27;batch&#x27;]\n    order_id:           str\n    material:           str\n    destination:        str\n    order_qty:          float\n    required_date:      str          # ISO 8601\n    credit_hold:        bool\n    request_type:       Literal[&#x27;PULL_IN&#x27;, &#x27;OVER_COMMIT&#x27;]\n\n\n    # ── Layer 1 outputs ─────────────────────────────────────────\n    stock_nodes:        list[dict]   # from fetch_available_stock\n    stock_sufficient:   bool         # conditional edge key\n    in_transit_nodes:   list[dict]   # from fetch_sto_nodes\n    not_shipped_nodes:  list[dict]   # from fetch_sto_nodes\n    route_result:       dict         # from find_fastest_atp_route\n    trunk_satisfied:    bool         # conditional edge key\n    rework_candidates:  list[dict]   # from check_rework_pool\n    wo_candidates:      list[dict]   # from check_wo_expedite\n\n\n    # ── What-if constraints (updated by LLM each turn) ────────────────\n    allowed_modes:        list[str]    # [&#x27;AIR&#x27;,&#x27;LAND&#x27;,&#x27;SEA&#x27;] default all\n    date_tolerance_days:  int          # 0 = strict required_date\n    exclude_plants:       list[str]    # planner excludes specific plants\n    max_split_count:      int          # max route segments, default unlimited\n\n\n    # ── Batch mode ──────────────────────────────────────────────\n    order_queue:        list[dict]   # sorted by reprioritize_backorders\n    global_stock_pool:  dict         # decremented after each order\n    allocation_plan:    list[dict]   # batch results accumulator\n\n\n⚠ All Layer 1 function return values are dict (not dataclass). This keeps the state JSON-serializable and MCP-ready. Internal computation objects inside Tool 3 use dataclass + slots for performance — see Section 6.2.</code>\n</details>\n",
+  "logic": [
+   {
+    "k": "Hybrid",
+    "v": "Deterministic state machine for the main flow; LLM only at parse_request and compose_response (Memo §1)"
+   },
+   {
+    "k": "Trigger",
+    "v": "mode=SINGLE → check_credit_hold · mode=BATCH → reprioritize_backorders (Tool 4) → joins at parse_request"
+   }
+  ]
+ },
+ "credit": {
+  "name": "check_credit_hold",
+  "cat": "PRE-CHECK / UTILITY",
+  "desc": "Validates customer credit status before any triage step. Reads VBUK.CMGST. If CMGST=B (credit blocked), triage is fully suspended and Finance is notified. All downstream proposals (STO, air, rework) would fail at execution time if credit is blocked — must clear first.",
+  "inputs": "order_id",
+  "bapi": [
+   "BAPI_SALESORDER_GETSTATUS",
+   "Direct read: VBUK.CMGST"
+  ],
+  "tools": [
+   "SAP VKM1 (T-code)"
+  ],
+  "outputs": "{blocked: bool, cmgst: str, credit_limit: float}",
+  "edges": [
+   {
+    "l": "ok",
+    "cls": "yes",
+    "t": "parse_request"
+   },
+   {
+    "l": "CMGST=B blocked",
+    "cls": "esc",
+    "t": "finance_notify → END"
+   }
+  ],
+  "agent": "intake",
+  "policies": [
+   "ORD-01 — Credit Hold Hard Block"
+  ],
+  "algo": "<div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8</div>\n<div class=\"code-sec\">check_credit_hold() — VKM1 pre-check <span class=\"src-tag\">Tech Spec v6 §8.0b</span></div><code class=\"p-code\">async def check_credit_hold(order_id: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Reads VBUK.CMGST for the order. Returns {blocked: bool, reason: str}.\n    If blocked: surface advisory to user, route to Finance for release.\n    Do not enter triage waterfall until credit hold is cleared.&#x27;&#x27;&#x27;\n    # SAP RFC: BAPI_SALESORDER_GETSTATUS or direct VBUK read</code>\n<div class=\"code-sec\">Why credit runs first (business rule, not LLM) <span class=\"src-tag\">Design Memo v0.8 §1.2</span></div><code class=\"p-code\">Credit check must always run first. Lazy STO fetch has a strict condition (stock_sufficient = False). Escalation steps must not run when the trunk succeeds. These are business rules — they should not depend on LLM prompt reliability.</code>\n"
+ },
+ "finance": {
+  "name": "finance_notify",
+  "cat": "DEAD-END / BLOCKED",
+  "desc": "Credit hold active. Surfaces advisory to user with Finance team routing. Triage fully suspended. Restarts only after Finance releases hold in SAP VKM1.",
+  "inputs": "blocked=true, cmgst=B",
+  "bapi": [],
+  "tools": [
+   "SAP VKM1"
+  ],
+  "outputs": "Finance notification · advisory to user",
+  "edges": [
+   {
+    "l": "after Finance release",
+    "cls": "",
+    "t": "Restart from check_credit_hold"
+   }
+  ],
+  "agent": "intake",
+  "algo": "<div class=\"algo-group\">Tech Spec v6</div>\n<div class=\"code-sec\">Credit-blocked handling <span class=\"src-tag\">Tech Spec v6 §8.0b</span></div><code class=\"p-code\"># VBUK.CMGST = &#x27;B&#x27; → blocked\n# If blocked: surface advisory to user, route to Finance for release.\n# Do not enter triage waterfall until credit hold is cleared.\n# All downstream actions (STO creation, air booking) would fail at\n# execution time regardless of stock availability.</code>\n"
+ },
+ "parse": {
+  "name": "parse_request",
+  "cat": "UTILITY / PARSE + CLASSIFY",
+  "desc": "Extracts order_id, pn, qty, requested_date (destination factory arrival, GR-inclusive — same dimension as current_commit), current_commit from free-text or structured input via Claude tool_use. Classifies request_type: PULL_IN = proactive Sales request; OVER_COMMIT = ERP-detected ATP slip (auto-sets mode=ALL, lower GATE threshold). Max 3 retries for missing fields (OI-04 fix).",
+  "inputs": "Raw WebSocket message or system event",
+  "bapi": [],
+  "tools": [
+   "Claude API — tool_use schema (extract_request)"
+  ],
+  "outputs": "request_df: {request_id, order_id, pn, qty, requested_date, current_commit, mode, request_type}",
+  "edges": [
+   {
+    "l": "fields ok",
+    "cls": "yes",
+    "t": "Inventory Agent"
+   },
+   {
+    "l": "missing fields ≤ 3 retries",
+    "cls": "no",
+    "t": "parse_request (loop)"
+   }
+  ],
+  "agent": "intake",
+  "algo": "<div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8</div>\n<div class=\"code-sec\">PARSE_SYSTEM_PROMPT (Claude tool_use · temperature=0) <span class=\"src-tag\">Tech Spec v6 §5.1</span></div><code class=\"p-code\">PARSE_SYSTEM_PROMPT = &#x27;&#x27;&#x27;\nYou are an ATP (Available-to-Promise) request parser for a supply chain system.\nExtract the following fields from the user&#x27;s pull-in request.\nIf a field is not present, return null — never guess.\nOutput ONLY valid JSON matching the schema below. No explanation.\n\nSchema:\n{\n  &#x27;order_id&#x27;: string | null,        // PO number, e.g. &#x27;PO-88321&#x27;\n  &#x27;pn&#x27;: string | null,              // part number, e.g. &#x27;GB300-NVL72&#x27;\n  &#x27;qty&#x27;: integer | null,            // quantity requested\n  &#x27;requested_date&#x27;: string | null,  // ISO 8601, e.g. &#x27;2025-06-10&#x27;\n  &#x27;current_commit&#x27;: string | null,  // current commit date if mentioned\n  &#x27;requester_context&#x27;: string,      // short summary of what they need\n  &#x27;missing_fields&#x27;: [string]        // list any fields that are absent\n}\n&#x27;&#x27;&#x27;</code>\n<div class=\"code-sec\">parse_router — missing-field loop <span class=\"src-tag\">Tech Spec v6 §2.3</span></div><code class=\"p-code\">builder.add_conditional_edges(&#x27;parse_request&#x27;, parse_router, {\n    &#x27;fields_ok&#x27;:      &#x27;check_shipping&#x27;,\n    &#x27;missing_fields&#x27;: &#x27;parse_request&#x27;,  # loop until all fields collected\n})</code>\n<div class=\"code-sec\">PULL_IN vs OVER_COMMIT handling <span class=\"src-tag\">Tech Spec v6 §8.0e</span></div><code class=\"p-code\">request_type drives urgency, notification, and auto-trigger behaviour:\n# PULL_IN:     proactive request from Sales/customer. SLA = respond in 60s.\n#              Notification target: Sales rep who submitted request.\n#              action_required threshold: normal (PROPOSE/GATE as defined).\n# OVER_COMMIT: ERP detected ATP slip. SLA = triage immediately, no human input.\n#              Notification target: account manager + planner + customer service.\n#              action_required: escalate threshold lower (GATE for shifts &gt; 2 days).\n#              Auto-trigger: system fires without human input. mode defaults to ALL.</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (3)</summary>\n<div class=\"code-sec\">EXTRACT_TOOL — tool schema <span class=\"src-tag\">Tech Spec v6 §5.1</span></div><code class=\"p-code\"># Tool definition for Claude API\nEXTRACT_TOOL = {\n    &#x27;name&#x27;: &#x27;extract_request&#x27;,\n    &#x27;description&#x27;: &#x27;Extract pull-in request fields&#x27;,\n    &#x27;input_schema&#x27;: {\n        &#x27;type&#x27;: &#x27;object&#x27;,\n        &#x27;properties&#x27;: {\n            &#x27;order_id&#x27;:        {&#x27;type&#x27;: [&#x27;string&#x27;,&#x27;null&#x27;]},\n            &#x27;pn&#x27;:              {&#x27;type&#x27;: [&#x27;string&#x27;,&#x27;null&#x27;]},\n            &#x27;qty&#x27;:             {&#x27;type&#x27;: [&#x27;integer&#x27;,&#x27;null&#x27;]},\n            &#x27;requested_date&#x27;:  {&#x27;type&#x27;: [&#x27;string&#x27;,&#x27;null&#x27;]},\n            &#x27;current_commit&#x27;:  {&#x27;type&#x27;: [&#x27;string&#x27;,&#x27;null&#x27;]},\n            &#x27;missing_fields&#x27;:  {&#x27;type&#x27;: &#x27;array&#x27;, &#x27;items&#x27;: {&#x27;type&#x27;: &#x27;string&#x27;}}\n        },\n        &#x27;required&#x27;: [&#x27;missing_fields&#x27;]\n    }\n}</code>\n<div class=\"code-sec\">request_df — output contract <span class=\"src-tag\">Tech Spec v6 §2.1b</span></div><code class=\"p-code\"># request_df — one row per active pull-in\n# col               dtype    description\n# request_id        str      REQ-2025-00441\n# order_id          str      PO-88321\n# pn                str      GB300-NVL72\n# qty               int      100\n# requested_date    date     2025-06-10   dest arrival, GR-inclusive\n# current_commit    date     2025-06-20   same dimension as requested_date\n# latest_ship_date  date     derived: requested_date - transit_days\n# mode              str      STEP | ALL\n# trigger_type      str      HUMAN | SYSTEM</code>\n<div class=\"code-sec\">Phase 1 stub vs Phase 2 LLM node <span class=\"src-tag\">Design Memo v0.8 §5 / §7</span></div><code class=\"p-code\">parse_request  ◄── [Phase 2: LLM node]\n   |  Phase 1: structured input assumed (SAP event trigger)\n   |  Phase 2: LLM parses natural language order request\n# Phase 2: Replace parse_request stub with LLM node.\n#          Add LangGraph memory (checkpointer) for conversation state.</code>\n</details>\n",
+  "logic": [
+   {
+    "k": "OVER_COMMIT",
+    "v": "ERP-detected ATP slip → SLA triage immediately, mode defaults to ALL, GATE for commit shifts > 2 days, notify account manager + planner + CS (Spec §8.0e)"
+   },
+   {
+    "k": "PULL_IN",
+    "v": "Proactive Sales request → SLA respond in 60s, notify submitting Sales rep (Spec §8.0e)"
+   },
+   {
+    "k": "Never guess",
+    "v": "Missing field → null + listed in missing_fields; loop back via parse_router (max 3 retries, OI-04)"
+   }
+  ]
+ },
+ "s01": {
+  "name": "check_dest_atp",
+  "cat": "STEP 01 / TRIAGE",
+  "desc": "Queries CO9 at destination plant with WUNSCH_DATE = requested_date (GR-inclusive; no transit offset — checking AT destination). Parallel quality block check via QM02/QMEL detects any open QN blocking GR movement type 101.",
+  "logic": [
+   {
+    "k": "Date dim",
+    "v": "requested_date = destination GR arrival (already GR-inclusive) — no transit offset applied here"
+   },
+   {
+    "k": "Early exit",
+    "v": "CO9 ATP ≥ qty AND eta ≤ requested_date AND qms_blocked=false → AUTO response, skip Steps 02–06"
+   },
+   {
+    "k": "QMS block",
+    "v": "QM02/QMEL: any open QN blocking movement type 101 at dest plant → qms_blocked=true, GR cannot proceed"
+   },
+   {
+    "k": "stock_sufficient",
+    "v": "Layer 1 fetch_available_stock() sets stock_sufficient — TRUE skips STO steps to check_inventory (Memo §5.1)"
+   }
+  ],
+  "inputs": "pn, dest_plant, qty, requested_date",
+  "bapi": [
+   "BAPI_MATERIAL_AVAILABILITY (CO9)",
+   "Table reads: QMEL, QMFE (QN notifications)"
+  ],
+  "tools": [
+   "SAP CO9 (T-code)",
+   "SAP QM02 / QMEL (T-code)"
+  ],
+  "outputs": "{atp_qty, atp_date, qms_blocked: bool, qn_number}",
+  "edges": [
+   {
+    "l": "ATP ok + QMS clear",
+    "cls": "yes",
+    "t": "compose_response (AUTO exit)"
+   },
+   {
+    "l": "insufficient",
+    "cls": "no",
+    "t": "check_open_sea_order"
+   }
+  ],
+  "algo": "<div class=\"algo-group\">LangGraph Logic Flow (original)</div>\n<div class=\"code-sec\">CO9 + Quality Block Check</div><code class=\"p-code\">BAPI_MATERIAL_AVAILABILITY(\n  plant        = dest_plant,\n  material     = pn,\n  wunsch_datum = requested_date   # GR-inclusive, no offset\n) → atp_qty, atp_date\n\ncheck_dest_quality_block(\n  tables: QMEL, QMFE\n  filter: dest_plant + material + mvt_type=101\n) → qms_blocked: bool, qn_number</code>\n<div class=\"code-sec\">Early Exit Condition</div><code class=\"p-code\">if (atp_qty >= qty\n    and atp_date <= requested_date\n    and not qms_blocked):\n    → compose_response(mode=AUTO)\n    # skip all triage steps 02–06</code><div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8</div>\n<div class=\"code-sec\">check_dest_quality_block() — Step 01 extension <span class=\"src-tag\">Tech Spec v6 §8.0c</span></div><code class=\"p-code\">async def check_dest_quality_block(pn: str, dest_plant: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Lightweight check: any open QN notification blocking GR movement type 101\n    at dest_plant for this pn. T-code QM02 / table QMEL + QMFE.\n    Returns {blocked: bool, qn_number: str, expected_clearance: date | None}&#x27;&#x27;&#x27;</code>\n<div class=\"code-sec\">Early-exit rule in ALL mode <span class=\"src-tag\">Tech Spec v6 §8.7.4</span></div><code class=\"p-code\"># Step 01 still runs first. If dest CO09 ATP &gt;= qty AND eta &lt;= requested_date:\n#   return single AUTO result immediately — skip asyncio.gather entirely.\n# This avoids unnecessary parallel queries when stock is already available.</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (3)</summary>\n<div class=\"code-sec\">Layer 1 — fetch_available_stock() (MCP-ready interface) <span class=\"src-tag\">Design Memo v0.8 §3.1</span></div><code class=\"p-code\"># ✅ CORRECT — MCP-ready\ndef fetch_available_stock(\n    material:      str,\n    destination:   str,\n    order_qty:     float,\n    required_date: str        # ISO 8601 string — JSON-friendly\n) -&gt; dict:                    # always return dict, not dataclass\n    &quot;&quot;&quot;\n    Check ATP availability per plant via CO09.\n    Returns available stock nodes and stock_sufficient flag.\n    &quot;&quot;&quot;\n    ...\n    return {\n        &quot;stock_nodes&quot;: [...],\n        &quot;stock_sufficient&quot;: True\n    }\n\n\n# ❌ WRONG — not MCP-ready\ndef fetch_available_stock(state: ATPAgentState) -&gt; ATPAgentState:\n    # Depends on LangGraph state — cannot be called standalone or via MCP\n    ...</code>\n<div class=\"code-sec\">One node cycle — node reads state, function computes, node writes back <span class=\"src-tag\">Design Memo v0.8 §6.3</span></div><code class=\"p-code\">LangGraph Node: check_dest_atp\n   |\n   |  1. Read inputs from state\n   |     material      = state[&#x27;material&#x27;]\n   |     destination   = state[&#x27;destination&#x27;]\n   |\n   ▼\nFunction: fetch_available_stock(material, destination, order_qty, required_date)\n   |\n   |  2. Internal: build Candidate dataclass objects  ← scratch paper\n   |     for each plant:\n   |         c = Candidate(effective_date=..., qty_neg=...)  ← dataclass\n   |     candidates.sort()   ← fast: order=True on dataclass\n   |\n   |  3. Discard dataclass objects — convert to dict before return\n   |     return {\n   |         &#x27;stock_nodes&#x27;:      [...],   ← list of dicts, not dataclasses\n   |         &#x27;stock_sufficient&#x27;: True\n   |     }\n   |\n   ▼\nLangGraph Node: check_dest_atp (continued)\n   |\n   |  4. Write result back to state\n   |     state[&#x27;stock_nodes&#x27;]      = result[&#x27;stock_nodes&#x27;]\n   |     state[&#x27;stock_sufficient&#x27;] = result[&#x27;stock_sufficient&#x27;]\n   |\n   ▼\nNext node reads stock_nodes and stock_sufficient from state</code>\n<div class=\"code-sec\">SAP tool — get_atp_status() <span class=\"src-tag\">Tech Spec v6 §3.1</span></div><code class=\"p-code\">@mcp.tool()\nasync def get_atp_status(order_id: str) -&gt; dict:\n    &#x27;&#x27;&#x27;SAP CO09 ATP check for a specific order.\n    Returns: {atp_date, atp_qty, over_committed: bool, slip_days: int}\n    CRITICAL: atp_date is the date stock is available AT SOURCE PLANT, not at destination.\n    Feasibility check: atp_date + transit_days &lt;= requested_date (destination arrival, GR-inclusive). transit_days: from Shipping Schedule (primary) or SAP route master TVRO (fallback).\n    Pass WUNSCH_DATE = latest_ship_date (= requested_date - transit_days) when calling BAPI_MATERIAL_AVAILABILITY.&#x27;&#x27;&#x27;</code>\n</details>\n",
+  "agent": "inv"
+ },
+ "seacheck": {
+  "name": "check_open_sea_order",
+  "cat": "GATE / OI-02 FIX",
+  "desc": "OI-02 gate: air shipping is a transport mode change on an existing sea order — not a new inventory source. Determines STO status (in-transit vs. not-yet-shipped) before allowing Step 02.",
+  "logic": [
+   {
+    "k": "OI-02 rule",
+    "v": "Air upgrade only relevant when an open sea order exists for this PN+plant — otherwise Step 02 is meaningless"
+   },
+   {
+    "k": "In-transit?",
+    "v": "LIPS record exists → goods in transit, cannot intercept → single candidate (wait only). No LIPS → still at origin → intervention possible"
+   },
+   {
+    "k": "Gate",
+    "v": "No open sea order → skip Step 02 entirely, go directly to Step 03 (cross-plant inventory)"
+   },
+   {
+    "k": "Lazy fetch",
+    "v": "Tool 2 (EKPO RFC) only runs when stock_sufficient = False — EKPO slower than CO09/MARD (Memo §8)"
+   }
+  ],
+  "inputs": "pn, source_plant, order_id",
+  "bapi": [
+   "Table read: EKPO (doc_type=UB, open_qty>0)",
+   "Table read: LIPS (outbound delivery exists?)"
+  ],
+  "tools": [
+   "Internal Shipping Schedule API"
+  ],
+  "outputs": "{has_open_sea_order: bool, sea_order_id, departure_date, is_in_transit: bool}",
+  "edges": [
+   {
+    "l": "has open sea order",
+    "cls": "yes",
+    "t": "check_shipping (Step 02)"
+   },
+   {
+    "l": "no open sea order",
+    "cls": "no",
+    "t": "check_inventory (Step 03)"
+   }
+  ],
+  "algo": "<div class=\"algo-group\">LangGraph Logic Flow (original)</div>\n<div class=\"code-sec\">STO Status Classification</div><code class=\"p-code\">@dataclass(slots=True)\nclass StoInTransitNode:    # LIPS record exists — cannot intercept\n    sto_doc:          str\n    receiving_plant:  str\n    open_qty:         float\n    expected_gr_date: date\n    effective_date:   date  # expected_gr_date + transit(WH→dest)\n    # → single candidate: DELIVER_AFTER_GR (wait only)\n\n@dataclass(slots=True)\nclass StoNotShippedNode:   # no LIPS — goods still at origin\n    sto_doc:          str\n    origin_plant:     str  # MFG plant\n    receiving_plant:  str\n    open_qty:         float\n    expected_gr_date: date\n    # → expands to 4 candidates (see Step 02)</code>\n<div class=\"code-sec\">Tool 2 — fetch_sto_nodes() [lazy call]</div><code class=\"p-code\">def fetch_sto_nodes(material, destination):\n    in_transit, not_shipped = [], []\n    for sto in query_ekpo(material, doc_type='UB'):\n        if check_lips(sto.doc):     # outbound delivery exists\n            in_transit.append(StoInTransitNode(...))\n        else:                        # goods still at origin\n            not_shipped.append(StoNotShippedNode(...))\n    return in_transit, not_shipped\n# Called lazily: only if Tool 1 (stock) cannot fully cover qty on-time</code><div class=\"algo-group\">Design Memo v0.8 · Tech Spec v6</div>\n<div class=\"code-sec\">effective_date — STO in-transit <span class=\"src-tag\">Design Memo v0.8 §5.2.3</span></div><code class=\"p-code\">STO in-transit:\n  lookup_next_shipment(receiving_WH, destination, expected_gr_date)\n  → arrival_date — single lookup. Goods arrive at WH first, then ship onward.</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (3)</summary>\n<div class=\"code-sec\">Node → Layer 1 mapping (in-transit branch) <span class=\"src-tag\">Design Memo v0.8 §4.1</span></div><code class=\"p-code\">check_open_sea_order (between 01–02)\n  Layer 1 : fetch_sto_nodes() — in-transit branch → returns in_transit_nodes\n  SAP     : EKPO, EKBE, LIPS / LIKP\n  Notes   : Classify STOs where LIPS exists. Cannot reroute.\n            Single DELIVER_AFTER_GR candidate each.\n            Lazy: only if stock_sufficient = False.</code>\n<div class=\"code-sec\">EKPO open-STO batch query (Optimisation 1) <span class=\"src-tag\">Design Memo v0.8 §6.4.2</span></div><code class=\"p-code\"># EKPO batch query — same pattern\nall_sto = query(\n    SELECT ekpo.matnr, ekpo.ebeln, ekpo.ebelp, ekko.reswk,\n           ekpo.werks, ekpo.menge, ekpo.eindt,\n           SUM(ekbe.menge) AS gr_qty\n    FROM   EKKO JOIN EKPO ON ekko.ebeln = ekpo.ebeln\n    LEFT   JOIN EKBE ON ekpo.ebeln = ekbe.ebeln\n           AND ekpo.ebelp = ekbe.ebelp AND ekbe.bewtp = E\n    WHERE  ekko.bsart = UB AND ekko.elikz = &#x27;&#x27;\n    AND    ekpo.matnr IN (:all_materials)\n    GROUP  BY ekpo.matnr, ekpo.ebeln, ekpo.ebelp,\n              ekko.reswk, ekpo.werks, ekpo.menge, ekpo.eindt\n)\nsto_pool = group_by(all_sto, key=matnr)   # Python-side grouping</code>\n<div class=\"code-sec\">iSCM tool — check_container_status() <span class=\"src-tag\">Tech Spec v6 §3.2</span></div><code class=\"p-code\">@mcp.tool()\nasync def check_container_status(order_id: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Check if order is already loaded into container.\n    Returns: {order_id, status: BOOKING|PRE_LOADING|LOADED|DEPARTED, locked: bool}&#x27;&#x27;&#x27;</code>\n</details>\n",
+  "agent": "inv",
+  "policies": [
+   "AIR-02 — Air Without Open Sea Order"
+  ]
+ },
+ "s02": {
+  "name": "check_shipping",
+  "cat": "STEP 02 / TRIAGE",
+  "desc": "Evaluates air upgrade feasibility for an existing open sea order. Expands not-yet-shipped STOs into 4 candidate routes. In-transit STOs yield a single wait-only candidate (cannot intercept).",
+  "logic": [
+   {
+    "k": "Air = transport",
+    "v": "Air is a mode upgrade on an existing STO — not a new inventory source. Qty comes from the sea order."
+   },
+   {
+    "k": "Feasibility",
+    "v": "eta_at_destination ≤ requested_date AND air_booking_cutoff > now"
+   },
+   {
+    "k": "4 candidates",
+    "v": "Not-yet-shipped STO → land×WH · land×dropship · air×WH · air×dropship"
+   },
+   {
+    "k": "P1 review",
+    "v": "All air options → Priority 1 (planner approval required). Land options → Priority 2 (standard review)"
+   },
+   {
+    "k": "Split allowed",
+    "v": "Any source type: split order when available qty covers partial date — segments with eta > required_date auto-elevate to P1"
+   },
+   {
+    "k": "Transit source",
+    "v": "Cross-border → Shipping Schedule (carrier API / DB); domestic STO → SAP PDT (SPRO/T001W) + GR day; fallback SAP route master TVRO.TRBZD with stale_flag"
+   },
+   {
+    "k": "No schedule",
+    "v": "lookup_next_shipment() returns None → source excluded, no error (Memo §5.2.5)"
+   }
+  ],
+  "inputs": "from_plant, dest, transit_fn, requested_date",
+  "bapi": [],
+  "tools": [
+   "Shipping Schedule (carrier API / DB)",
+   "TMS / 3PL API"
+  ],
+  "outputs": "schedule_df: {mode, carrier, departure_date, transit_days, eta_at_dest, air_cutoff, cost_usd_est, feasible}",
+  "edges": [
+   {
+    "l": "feasible",
+    "cls": "yes",
+    "t": "collect_air_form (HITL-1)"
+   },
+   {
+    "l": "not feasible",
+    "cls": "no",
+    "t": "check_inventory (Step 03)"
+   }
+  ],
+  "algo": "<div class=\"algo-group\">LangGraph Logic Flow (original)</div>\n<div class=\"code-sec\">StoNotShippedNode — 4-Candidate Expansion</div><code class=\"p-code\">for node in sto_not_shipped:\n  for mode in ('LAND', 'AIR'):\n    for route in ('WH', 'DROPSHIP'):\n\n      if route == 'WH':\n        # Goods travel to receiving_plant first, then to dest\n        eff = node.expected_gr_date + transit(receiving_plant, dest, mode)\n      else:\n        # Dropship: goods ship direct from MFG, skip WH entirely\n        eff = today + transit(origin_plant, dest, mode)\n\n      candidates.append(Candidate(\n        effective_date   = eff,\n        qty_neg          = -node.open_qty,\n        source_type      = f'STO_{route}_{mode}',\n        action           = 'DELIVER_VIA_WH'         if route=='WH'\n                           else 'SPLIT_STO_REDIRECT',\n        review_priority  = 1 if mode=='AIR' else 2,  # air → always P1\n        split_required   = (route == 'DROPSHIP')\n      ))</code>\n<div class=\"code-sec\">StoInTransitNode — Single Candidate (no intervention)</div><code class=\"p-code\">for node in sto_in_transit:\n  # Goods physically in transit — cannot change route\n  candidates.append(Candidate(\n    effective_date  = node.effective_date,  # gr_date + transit(WH→dest)\n    source_type     = 'STO_WAIT_GR',\n    action          = 'DELIVER_AFTER_GR',\n    review_priority = 2,\n    split_required  = False\n  ))</code><div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8</div>\n<div class=\"code-sec\">Date semantics — single dimension (dest arrival, GR-inclusive) <span class=\"src-tag\">Tech Spec v6 §8.0</span></div><code class=\"p-code\">requested_date      = destination factory arrival date (GR-inclusive)  ← what Sales tells the customer\ncurrent_commit      = same dimension as requested_date (arrival at dest.) ← original order committed date\ntransit_days        = from Shipping Schedule (carrier API / DB), primary source per route + mode\n                      Fallback: SAP route master (T-code OVR1, table TVRO) — standard days by route code\nlatest_ship_date    = requested_date - transit_days          ← derived, used as WUNSCH_DATE in CO09\nair_booking_cutoff  = from TMS / forwarder API (real-time)    ← must be &gt; today to be feasible\neta_at_destination  = departure_date + transit_days           ← compare directly to requested_date\n\n# Step 02 feasibility (air):  eta_at_destination(air) &lt;= requested_date  AND  air_booking_cutoff &gt; today\n# Step 03 feasibility (STO): CO09_atp_date_at_source + transit_days &lt;= requested_date\n# i.e. pass WUNSCH_DATE = latest_ship_date to CO09 BAPI; accept result only if ATVMENGE &gt;= qty</code>\n<div class=\"code-sec\">get_transit_days() — Shipping Schedule → SAP TVRO fallback <span class=\"src-tag\">Tech Spec v6 §8.0</span></div><code class=\"p-code\">async def get_transit_days(from_plant: str, to_plant: str, mode: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Unified transit days resolver with fallback chain.\n    Priority 1 — Shipping Schedule (carrier API or internal DB):\n        Real departure + ETA from actual vessel/flight schedule. Most accurate.\n    Priority 2 — SAP route master (T-code OVR1, table TVRO):\n        Standard transit days from SAP route configuration. Static per route code.\n        Read via: SELECT TRBZD FROM TVRO WHERE ROUTE = sap_route_code(from_plant, to_plant, mode)\n        (TRBZD = transit time in days, ROUTE = SAP route code e.g. TWUS01 Taiwan→US sea)&#x27;&#x27;&#x27;\n    try:\n        sched = await get_shipping_schedule(from_plant, to_plant, mode)\n        return {&#x27;transit_days&#x27;: sched[&#x27;transit_days&#x27;], &#x27;source&#x27;: &#x27;shipping_schedule&#x27;, &#x27;stale_flag&#x27;: False}\n    except ScheduleUnavailableError:\n        sap_days = await get_sap_route_transit_days(from_plant, to_plant, mode)  # reads TVRO.TRBZD\n        return {&#x27;transit_days&#x27;: sap_days, &#x27;source&#x27;: &#x27;sap_route_master&#x27;, &#x27;stale_flag&#x27;: True}  # flag in response</code>\n<div class=\"code-sec\">lookup_next_shipment() — mode is a result, not an input <span class=\"src-tag\">Design Memo v0.8 §5.2.2</span></div><code class=\"p-code\">def lookup_next_shipment(\n    origin:             str,\n    destination:        str,\n    earliest_ship_date: str   # ISO 8601 — goods cannot ship before this\n) -&gt; dict | None:\n    # Query schedule table for earliest-arriving shipment\n    # Returns: {shipping_date, arrival_date, transport_mode}\n    # Returns None if no shipment available in window\n    result = query(\n        SELECT shipping_date, arrival_date, transport_mode\n        FROM   TRANSPORTATION_SCHEDULE\n        WHERE  origin_plant   = :origin\n        AND    destination    = :destination\n        AND    shipping_date &gt;= :earliest_ship_date\n        ORDER  BY arrival_date ASC\n        LIMIT  1\n    )\n    if not result: return None\n    return {\n        shipping_date:  result.shipping_date,\n        arrival_date:   result.arrival_date,    # = effective_date for Tool 3\n        transport_mode: result.transport_mode   # SEA/AIR/LAND — result not input\n    }</code>\n<div class=\"code-sec\">effective_date per source type <span class=\"src-tag\">Design Memo v0.8 §5.2.3</span></div><code class=\"p-code\">Stock node (on-hand / future ATP)\n  lookup_next_shipment(plant, destination, atp_date)            → arrival_date (single lookup)\nSTO in-transit\n  lookup_next_shipment(receiving_WH, destination, expected_gr_date) → arrival_date (single lookup)\nSTO not-yet-shipped via WH (2 legs)\n  Leg 1: lookup(origin_plant, WH, atp_date)        → wh_arrival_date\n  Leg 2: lookup(WH, destination, wh_arrival_date)  → Leg 2 arrival_date\n         (must wait for Leg 1 to complete before Leg 2 departs)\nSTO not-yet-shipped dropship (1 leg)\n  lookup_next_shipment(origin_plant, destination, atp_date)     → arrival_date (WH skipped)\n\n# Compare via-WH vs dropship arrival_date — earlier wins;\n# its transport_mode becomes the Candidate transport_mode.</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (5)</summary>\n<div class=\"code-sec\">Old vs new — STO not-yet-shipped <span class=\"src-tag\">Design Memo v0.8 §5.2.5</span></div><code class=\"p-code\">OLD: four pre-computed variables (mode is an input assumption)\n  eff_land_to_wh    = gr + land_to_wh + land_to_dest\n  eff_air_to_wh     = gr + air_to_wh  + land_to_dest\n  eff_dropship_land = gr + land_to_dest\n  eff_dropship_air  = gr + air_to_dest\n\nNEW: two lookups, mode is result\n  via_wh   = lookup(origin-&gt;WH, gr) then lookup(WH-&gt;dest, wh_arrival)\n  dropship = lookup(origin-&gt;dest, gr)\n  Compare via_wh.arrival vs dropship.arrival → earlier one wins.\n\n⚠ If lookup_next_shipment() returns None (no scheduled shipment in the\n  window), that source is excluded from the candidate list — no error raised.</code>\n<div class=\"code-sec\">schedule_df — output contract <span class=\"src-tag\">Tech Spec v6 §2.1b</span></div><code class=\"p-code\"># schedule_df — one row per departure option\n# col               dtype    description\n# mode              str      SEA | AIR\n# carrier           str      COSCO\n# departure_date    date     2025-06-08\n# transit_days      int      3     cross-border: Shipping Schedule; domestic STO: SAP PDT (SPRO/T001W) + GR day\n# eta_at_dest       date     2025-06-11   departure_date + transit_days\n# air_cutoff        datetime 2025-06-07T14:00Z   must be &gt; now for air\n# cost_usd_est      float    8400.0\n# feasible          bool     True  — eta_at_dest &lt;= requested_date AND cutoff &gt; now\n# transit_source    str      shipping_schedule | sap_route_master</code>\n<div class=\"code-sec\">shipping_router <span class=\"src-tag\">Tech Spec v6 §2.3</span></div><code class=\"p-code\">builder.add_conditional_edges(&#x27;check_shipping&#x27;, shipping_router, {\n    &#x27;air_feasible&#x27;:  &#x27;collect_air_form&#x27;,\n    &#x27;no_air&#x27;:        &#x27;check_inventory&#x27;,\n})</code>\n<div class=\"code-sec\">iSCM / TMS tools <span class=\"src-tag\">Tech Spec v6 §3.2–3.3</span></div><code class=\"p-code\">@mcp.tool()\nasync def get_shipping_schedule(plant: str, dest: str = None) -&gt; dict:\n    &#x27;&#x27;&#x27;Shipping Schedule query (carrier API or internal DB; iSCM if available).\n    Returns: {sea_departures: [{date, eta_at_destination, transit_days, carrier}], air_departures: [{date, eta_at_destination, transit_days, carrier, cutoff}]}\n    eta_at_destination = destination factory arrival date (GR-inclusive). Agent compares this directly against requested_date.&#x27;&#x27;&#x27;\n\n@mcp.tool()\nasync def get_freight_cost_estimate(from_plant: str, to_plant: str,\n                                     qty: int, mode: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Returns cost estimate for shipping mode (AIR | SEA | TRUCK).\n    Returns: {cost_usd, transit_days, carrier, booking_cutoff}&#x27;&#x27;&#x27;\n\n@mcp.tool()\nasync def get_air_cutoff(origin: str, destination: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Real-time air freight booking cutoff from TMS or forwarder API.\n    Returns: {cutoff_datetime, carrier, flight_no, next_available_cutoff}&#x27;&#x27;&#x27;</code>\n<div class=\"code-sec\">Cache policy <span class=\"src-tag\">Tech Spec v6 §7</span></div><code class=\"p-code\">Shipping Schedule        ship:{plant}:{dest}      TTL 60 min  — fallback carrier API / DB; flag to user\nSAP route master (TVRO)  sap_route:{route_code}   TTL 24 hrs  — flag [SAP FALLBACK] in response\nAir freight cutoff       aircut:{route}           NO CACHE    — always live TMS call</code>\n</details>\n",
+  "agent": "inv",
+  "policies": [
+   "AIR-01 — Cost-Benefit Gate (checked by Policy Agent)",
+   "AIR-03 — Air Booking Cutoff Missed"
+  ]
+ },
+ "airform": {
+  "name": "collect_air_form",
+  "cat": "HUMAN OVERSIGHT · INTERRUPT  ⚠ OI-05",
+  "desc": "LangGraph INTERRUPT node — pauses thread while planner fills air form (PN, qty, ship-from, ship-to, urgency reason, cost center, approver). OI-05: no inventory reservation held during wait — stock may be consumed by another order while form is pending.",
+  "logic": [
+   {
+    "k": "OI-05 risk",
+    "v": "No inventory reservation held during INTERRUPT — another order may consume the stock while form is pending"
+   },
+   {
+    "k": "Cost gate",
+    "v": "Form submitted with cost > $3,000 → auto-routes to GATE in route_to_approval (named approver required)"
+   },
+   {
+    "k": "Abandon",
+    "v": "Form abandoned or cost gate fail → fallback to check_inventory (Step 03)"
+   }
+  ],
+  "inputs": "Air feasibility confirmed",
+  "bapi": [],
+  "tools": [
+   "Chainlit INTERRUPT (human-in-the-loop)"
+  ],
+  "outputs": "air_form: {pn, qty, ship_from, ship_to, urgency_reason, cost_center, approver}",
+  "edges": [
+   {
+    "l": "form complete",
+    "cls": "yes",
+    "t": "Policy Agent → route_to_approval"
+   },
+   {
+    "l": "abandoned",
+    "cls": "no",
+    "t": "check_inventory (Step 03)"
+   }
+  ],
+  "agent": "inv",
+  "policies": [
+   "AIR-01 — Cost-Benefit Gate (fires if cost > threshold)"
+  ],
+  "algo": "<div class=\"algo-group\">Tech Spec v6 · Step Flow v2</div>\n<div class=\"code-sec\">air_form_router <span class=\"src-tag\">Tech Spec v6 §2.3</span></div><code class=\"p-code\">builder.add_conditional_edges(&#x27;collect_air_form&#x27;, air_form_router, {\n    &#x27;form_complete&#x27;:  &#x27;route_to_approval&#x27;,\n    &#x27;air_gate_fail&#x27;:  &#x27;check_inventory&#x27;,  # cost exceeds threshold; fall through\n})</code>\n<div class=\"code-sec\">Cost gate threshold (agent_config) <span class=\"src-tag\">Tech Spec v6 §4.1</span></div><code class=\"p-code\">(&#x27;air_freight_gate_threshold_usd&#x27;, &#x27;3000&#x27;, &#x27;Air freight cost above this requires GATE&#x27;)\n# config:* cached 5 min — always reload before GATE checks (§7)</code>\n<div class=\"code-sec\">OI-05 — thread blocked while form pending <span class=\"src-tag\">Step Flow v2</span></div><code class=\"p-code\">collect_air_form is an INTERRUPT node. Pauses thread while user fills air form.\nOI-05: if form takes hours, Step 03 inventory may be consumed by another order.\nNo reservation held during wait.</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (2)</summary>\n<div class=\"code-sec\">Interrupt compile <span class=\"src-tag\">Tech Spec v6 §2.3</span></div><code class=\"p-code\"># Human interrupt nodes\ngraph = builder.compile(\n    checkpointer=AsyncPostgresSaver(conn),\n    interrupt_before=[&#x27;collect_air_form&#x27;, &#x27;route_to_approval&#x27;],\n)</code>\n<div class=\"code-sec\">State fields — human form collection <span class=\"src-tag\">Tech Spec v6 §2.1</span></div><code class=\"p-code\"># ── Human form collection ──────────────────────────────\nair_form:          Optional[dict]         # Collected fields\nair_form_complete: bool                   # All required fields present\nsto_form:          Optional[dict]\npending_approval:  Optional[str]          # approval_id in queue</code>\n</details>\n"
+ },
+ "s03": {
+  "name": "check_inventory",
+  "cat": "STEP 03 / TRIAGE",
+  "desc": "Queries CO9 across all source plants. Combines sources using split_qty logic to cover full order qty. Surfaces restricted stock advisory when physical stock exists but CO9 ATP=0.",
+  "logic": [
+   {
+    "k": "Plant priority",
+    "v": "P1 = 完稅廠 tax-cleared + available + not scrap-flagged · P2 = lowest freight · P3 = scrap-bound"
+   },
+   {
+    "k": "split_qty",
+    "v": "min(qty_needed − already_covered, source_co9_atp) — combine sources, e.g. WH02 80pcs + WH04 20pcs = 100"
+   },
+   {
+    "k": "QI advisory",
+    "v": "CO9 ATP=0 but MMBE physical>0 → restricted stock advisory (QI / blocked / in-transit) with responsible owner + T-code action"
+   },
+   {
+    "k": "Tax-cleared",
+    "v": "T001W flag — only 完稅廠-flagged plants eligible for P1 priority"
+   },
+   {
+    "k": "atp_date",
+    "v": "CO9 returns atp_date >= today (not just today's stock) — includes future-dated confirmed availability"
+   },
+   {
+    "k": "trunk_satisfied",
+    "v": "Set by find_fastest_atp_route(): OK → skip escalation to check_shortage; LATE/PARTIAL → Steps 04–06 (Memo §5.1)"
+   },
+   {
+    "k": "Container lock",
+    "v": "Split only if container_status ∈ {BOOKING, PRE_LOADING}; LOADED/DEPARTED not splittable (Spec §8.2)"
+   },
+   {
+    "k": "WUNSCH_DATE",
+    "v": "CO9 at source uses latest_ship_date = requested_date − transit_days (OI-06)"
+   }
+  ],
+  "inputs": "pn, all_plants, qty, requested_date, already_covered",
+  "bapi": [
+   "BAPI_MATERIAL_AVAILABILITY (CO9)",
+   "Table reads: MARD (stock), T001W (plant master / 完稅廠 flag)"
+  ],
+  "tools": [
+   "SAP CO9 (T-code)",
+   "SAP MMBE (T-code)",
+   "SAP MB52 (T-code)"
+  ],
+  "outputs": "inventory_df: {plant_id, co9_atp_qty, co9_atp_date, mmbe_unrestricted, mmbe_in_quality, tax_cleared, transit_days, eta_at_dest, feasible, priority, freight_cost_usd}",
+  "edges": [
+   {
+    "l": "STO feasible",
+    "cls": "yes",
+    "t": "route_to_approval"
+   },
+   {
+    "l": "not feasible",
+    "cls": "no",
+    "t": "check_wo_expedite (Step 04)"
+   }
+  ],
+  "algo": "<div class=\"algo-group\">LangGraph Logic Flow (original)</div>\n<div class=\"code-sec\">StockNode Data Model</div><code class=\"p-code\">@dataclass(slots=True)\nclass StockNode:\n    warehouse_id:   str\n    plant:          str\n    avail_qty:      float\n    atp_date:       date      # >= today from CO9 per plant\n    transit_days:   int\n    effective_date: date      # pre-computed: atp_date + transit_days\n    tax_cleared:    bool      # T001W: 完稅廠 flag\n    freight_cost:   float     # freight_table[(plant, destination)]</code>\n<div class=\"code-sec\">Tool 1 — fetch_onhand_stock()</div><code class=\"p-code\">def fetch_onhand_stock(material, destination, today):\n    nodes = []\n    for plant in all_plants:\n        atp = BAPI_MATERIAL_AVAILABILITY(plant, material)\n        if atp.qty > 0:\n            t = transit_table[(plant, destination, 'LAND')]\n            nodes.append(StockNode(\n                avail_qty      = atp.qty,\n                atp_date       = atp.date,       # >= today\n                effective_date = atp.date + timedelta(days=t),\n                tax_cleared    = T001W_tax_flag(plant),\n                freight_cost   = freight_table[(plant, destination)]\n            ))\n    return nodes\n# Early exit: single node covers full qty on-time → skip Tool 2 (STO)</code>\n<div class=\"code-sec\">Tool 3 — Candidate Sort &amp; Greedy Fill (O(n log n))</div><code class=\"p-code\">@dataclass(order=True, slots=True)\nclass Candidate:\n    effective_date:  date         # sort primary ASC\n    qty_neg:         float        # tiebreak: stored negative → large qty first\n    source_type:     str  = field(compare=False)\n    qty:             float = field(compare=False)\n    action:          str  = field(compare=False)\n    review_priority: int  = field(compare=False)  # 1=P1  2=standard\n\ncandidates.sort()    # order=True → no lambda needed\n\nselected, remaining = [], order_qty\nfor c in candidates:\n    if remaining <= 0: break\n    take = min(c.qty, remaining)\n    selected.append((c, take))\n    remaining -= take\n    if c.effective_date > required_date:\n        c.review_priority = 1   # LATE segment → elevate to P1\n\nstatus = ('PARTIAL' if remaining > 0\n          else 'LATE' if any(c.effective_date > required_date\n                             for c,_ in selected)\n          else 'OK')</code><div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8</div>\n<div class=\"code-sec\">STO feasibility — WUNSCH_DATE = latest_ship_date (OI-06) <span class=\"src-tag\">Tech Spec v6 §8.0</span></div><code class=\"p-code\">latest_ship_date = requested_date - transit_days   ← used as WUNSCH_DATE in CO09\n# Step 03 feasibility (STO): CO09_atp_date_at_source + transit_days &lt;= requested_date\n# i.e. pass WUNSCH_DATE = latest_ship_date to CO09 BAPI; accept result only if ATVMENGE &gt;= qty</code>\n<div class=\"code-sec\">score_source_plants() — P1 / P2 / P3 <span class=\"src-tag\">Tech Spec v6 §8.3</span></div><code class=\"p-code\">def score_source_plants(plants: list[dict]) -&gt; list[dict]:\n    &#x27;&#x27;&#x27;\n    Rank source plants by P1/P2/P3 priority:\n    P1: tax_cleared=True AND available &gt; 0 AND scrap_flagged=False\n    P2: tax_cleared=False AND available &gt; 0 → sorted by freight_cost_estimate ASC\n    P3: scrap_flagged=True AND available &gt; 0 → needs approval flow\n    &#x27;&#x27;&#x27;\n    p1 = [p for p in plants if p[&#x27;tax_cleared&#x27;] and p[&#x27;available&#x27;] &gt; 0 and not p[&#x27;scrap_flagged&#x27;]]\n    p2 = [p for p in plants if not p[&#x27;tax_cleared&#x27;] and not p[&#x27;scrap_flagged&#x27;]\n           and p[&#x27;available&#x27;] &gt; 0]\n    p3 = [p for p in plants if p[&#x27;scrap_flagged&#x27;] and p[&#x27;available&#x27;] &gt; 0]\n\n    p2_sorted = sorted(p2, key=lambda x: x.get(&#x27;freight_cost_usd&#x27;, 99999))\n\n    for i, plant in enumerate(p1): plant[&#x27;priority&#x27;] = &#x27;P1&#x27;\n    for i, plant in enumerate(p2_sorted): plant[&#x27;priority&#x27;] = &#x27;P2&#x27;\n    for i, plant in enumerate(p3): plant[&#x27;priority&#x27;] = &#x27;P3&#x27;\n\n    return p1 + p2_sorted + p3</code>\n<div class=\"code-sec\">explain_restricted_stock() — CO09=0 but MMBE&gt;0 <span class=\"src-tag\">Tech Spec v6 §8.6</span></div><code class=\"p-code\">async def explain_restricted_stock(pn: str, plant: str, atp_qty: int) -&gt; dict:\n    &#x27;&#x27;&#x27;Called when CO09 ATP = 0 but MMBE physical stock &gt; 0.\n    Queries MMBE stock categories, maps each to a reason + owner + suggested action.\n    Returns advisory message included in agent response.&#x27;&#x27;&#x27;\n    mmbe = await get_std_stock(pn, plant)  # {unrestricted, in_quality, blocked, transit}\n    advisories = []\n    STOCK_ADVISORY = {\n        &#x27;in_quality&#x27;: {\n            &#x27;reason&#x27;:  &#x27;Stock is under Quality Inspection (QA lot open). Cannot ship until usage decision (UD) is made.&#x27;,\n            &#x27;owner&#x27;:   &#x27;QM Team / Quality Manager&#x27;,\n            &#x27;sap_action&#x27;: &#x27;QA32 — usage decision on inspection lot&#x27;,\n            &#x27;suggested_msg&#x27;: &#x27;Ask QM team for inspection lot status and expected UD date via QA32.&#x27;,\n        },\n        &#x27;blocked&#x27;: {\n            &#x27;reason&#x27;:  &#x27;Stock is Blocked (e.g. GR blocked, return from customer, or manual block). Excluded from MRP planning by design.&#x27;,\n            &#x27;owner&#x27;:   &#x27;Plant Controller / Warehouse Manager&#x27;,\n            &#x27;sap_action&#x27;: &#x27;MB1B movement type 344 to transfer to unrestricted, or investigate GR/GI block via MIGO&#x27;,\n            &#x27;suggested_msg&#x27;: &#x27;Contact Plant Controller to confirm block reason and whether unblocking is feasible for this order.&#x27;,\n        },\n        &#x27;transit&#x27;: {\n            &#x27;reason&#x27;:  &#x27;Stock is in Transit (open STO in transfer). Available at destination after transit time.&#x27;,\n            &#x27;owner&#x27;:   &#x27;Logistics / Warehouse&#x27;,\n            &#x27;sap_action&#x27;: &#x27;MB52 or MD04 to see expected GR date of in-transit STO&#x27;,\n            &#x27;suggested_msg&#x27;: &#x27;Check in-transit STO GR date via MD04. If GR date &lt; requested date, stock will be available in time.&#x27;,\n        },\n    }\n    for category, qty in mmbe.items():\n        if category in STOCK_ADVISORY and qty &gt; 0:\n            advisories.append({**STOCK_ADVISORY[category], &#x27;qty&#x27;: qty, &#x27;category&#x27;: category})\n    return {&#x27;atp_qty&#x27;: atp_qty, &#x27;mmbe_physical&#x27;: sum(mmbe.values()), &#x27;advisories&#x27;: advisories}</code>\n<div class=\"code-sec\">Container lock — is_splittable() <span class=\"src-tag\">Tech Spec v6 §8.2</span></div><code class=\"p-code\"># Container status state machine — the agent must understand these states:\n# BOOKING     → order exists, no container assigned yet → SPLITTABLE\n# PRE_LOADING → container assigned, not yet loaded      → SPLITTABLE (tight window)\n# LOADED      → physically in container                 → NOT splittable\n# DEPARTED    → container left port                     → NOT splittable\n\ndef is_splittable(container_status: str) -&gt; bool:\n    return container_status in (&#x27;BOOKING&#x27;, &#x27;PRE_LOADING&#x27;)\n\n# PRE_LOADING split requires iSCM API call to de-consolidate\n# Must happen before container loading cutoff (typically 24h before departure)</code>\n<div class=\"code-sec\">split_order() — split_qty rule <span class=\"src-tag\">Tech Spec v6 §3.1</span></div><code class=\"p-code\">@mcp.tool()\nasync def split_order(order_id: str, split_qty: int, new_plant: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Split open sea order: redirect split_qty to new_plant via air.\n    IMPORTANT: split_qty = min(qty_needed - already_covered, source_co09_atp).\n    Combine partial sources to reach full qty (e.g. WH02 80pcs + WH04 split 20pcs = 100). Pre-condition: container_status in (BOOKING, PRE_LOADING) AND source_co09_atp &gt;= split_qty.\n    Pre-condition: container_status == PRE_LOADING.\n    Returns: {original_order_id, new_order_id, split_qty, status}&#x27;&#x27;&#x27;</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (8)</summary>\n<div class=\"code-sec\">Node → Layer 1 mapping <span class=\"src-tag\">Design Memo v0.8 §4.1</span></div><code class=\"p-code\">check_inventory (Step 03)\n  Layer 1 : find_fastest_atp_route() → route_result {status, routes, shortfall_qty}\n  SAP     : CO09, MARD, EKPO (via prior steps)\n  Notes   : Merges all candidates. Greedy earliest-date-first fill.\n            Sets trunk_satisfied flag — drives escalation conditional edge.</code>\n<div class=\"code-sec\">True Available (superseded by CO09 — kept for reference) <span class=\"src-tag\">Tech Spec v6 §8.1 / §8.5</span></div><code class=\"p-code\">async def calculate_true_available(pn: str, plant: str, exclude_order_id: str) -&gt; dict:\n    &#x27;&#x27;&#x27;\n    True Available = unrestricted_stock - sum(confirmed_qty WHERE\n        pn = pn AND plant = plant AND\n        order_status IN (&#x27;CONFIRMED&#x27;, &#x27;IN_PROCESS&#x27;) AND\n        order_id != exclude_order_id  -- don&#x27;t subtract the requesting order itself\n    )\n\n    Implementation note: this requires a custom SAP RFC call to\n    BAPI_MATERIAL_AVAILABILITY or a direct query on VBAP + LIPS tables.\n    The MCP SAP server must implement this join correctly.\n    &#x27;&#x27;&#x27;\n    unrestricted = (await get_std_stock(pn, plant))[&#x27;unrestricted&#x27;]\n    open_demand  = await get_open_order_demand(pn, plant, exclude_order_id)\n    available    = unrestricted - open_demand\n    return {&#x27;available&#x27;: available, &#x27;unrestricted&#x27;: unrestricted,\n            &#x27;allocated_to_other_orders&#x27;: open_demand}\n\n# §8.5: CO09 / BAPI_MATERIAL_AVAILABILITY returns ATP already net of all MRP\n# demands, open SOs, safety stock and planned receipts → replaces this custom\n# VBAP+VBBE query. MMBE / MB52 = diagnostic layer; CO09 = decision layer.</code>\n<div class=\"code-sec\">Tool 3 receives effective_date from the schedule table <span class=\"src-tag\">Design Memo v0.8 §5.2.4</span></div><code class=\"p-code\"># Tool 3 receives candidates with effective_date already populated by Tool 1/2\n# No change to sort or greedy fill\n\n\n# Each AllocatedRoute now carries:\n#   effective_date  = arrival_date  (from schedule table)\n#   transport_mode  = SEA/AIR/LAND  (result from lookup — not pre-assumed)\n#   shipping_date   = when goods must leave origin (planner action date)\n\n\n# LLM at compose_response sees transport_mode and decides:\n#   AIR -&gt; flag P1, check if approval form required\n#   SEA / LAND -&gt; P2 standard review</code>\n<div class=\"code-sec\">What-if re-run — no SAP re-query <span class=\"src-tag\">Design Memo v0.8 §6.4</span></div><code class=\"p-code\">Re-run find_fastest_atp_route() — pure Python, no SAP call\n   filter: transport_mode IN allowed_modes\n   filter: arrival_date &lt;= required_date + date_tolerance_days\n   filter: plant NOT IN exclude_plants\n   sort + greedy fill — unchanged algorithm</code>\n<div class=\"code-sec\">inventory_df — output contract <span class=\"src-tag\">Tech Spec v6 §2.1b</span></div><code class=\"p-code\"># inventory_df — one row per source plant evaluated\n# col               dtype    description\n# plant_id          str      WH02\n# co09_atp_qty      int      120   demand-netted qty at source\n# co09_atp_date     date     2025-06-08   at source; compare to latest_ship_date\n# mmbe_unrestricted int      120\n# mmbe_in_quality   int      1262  advisory triggered if &gt;0\n# mmbe_blocked      int      0\n# tax_cleared       bool     True  — 完稅廠 flag\n# transit_days      int      3     cross-border: Shipping Schedule; domestic STO: SAP PDT (SPRO/T001W) + GR day\n# eta_at_dest       date     2025-06-11   co09_atp_date + transit_days\n# feasible          bool     True  — eta_at_dest &lt;= requested_date\n# priority          str      P1    — P1 | P2 | P3\n# freight_cost_usd  float    1200.0</code>\n<div class=\"code-sec\">inventory_router <span class=\"src-tag\">Tech Spec v6 §2.3</span></div><code class=\"p-code\">builder.add_conditional_edges(&#x27;check_inventory&#x27;, inventory_router, {\n    &#x27;sto_feasible&#x27;:  &#x27;route_to_approval&#x27;,\n    &#x27;no_sto&#x27;:        &#x27;check_rework&#x27;,\n})</code>\n<div class=\"code-sec\">SAP tools <span class=\"src-tag\">Tech Spec v6 §3.1</span></div><code class=\"p-code\">@mcp.tool()\nasync def get_stock_by_plant(pn: str, plants: list[str] = None) -&gt; dict:\n    &#x27;&#x27;&#x27;Query SAP MD04 for raw unrestricted stock per plant (NOT demand-netted).\n    Does NOT subtract open order demand. Always call calculate_true_available() for net available.\n    Returns: {plant_id: {unrestricted, scrap_flagged, tax_cleared}}&#x27;&#x27;&#x27;\n\n@mcp.tool()\nasync def check_tax_status(plant: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Returns whether plant is 完稅廠 (duty-paid).\n    Source: SAP T001W plant master custom field Z_TAX_CLEARED.\n    Returns: {plant, tax_cleared: bool, tax_type: str}&#x27;&#x27;&#x27;\n\n@mcp.tool()\nasync def get_std_stock(pn: str, plant: str) -&gt; dict:\n    &#x27;&#x27;&#x27;SAP MB52 standard stock query.\n    Returns: {unrestricted, in_quality, blocked, transit, valuation_price}&#x27;&#x27;&#x27;</code>\n<div class=\"code-sec\">Cache policy <span class=\"src-tag\">Tech Spec v6 §7</span></div><code class=\"p-code\">SAP stock by plant    stock:{pn}:{plant}   TTL 15 min  — live SAP query on miss; append [STALE]\nTax clearance status  tax:{plant}          TTL 24 hrs  — SAP T001W query; append [CACHED]</code>\n</details>\n",
+  "agent": "res",
+  "policies": [
+   "INV-01 — QI stock cannot be promised",
+   "INV-02 — 完稅廠 priority enforced"
+  ]
+ },
+ "s04": {
+  "name": "check_wo_expedite",
+  "cat": "STEP 04 / TRIAGE",
+  "desc": "Checks production order status via CO3/MES. Uses yield-adjusted forecast qty, not raw WO qty. OT requirement determines approval path.",
+  "logic": [
+   {
+    "k": "Yield formula",
+    "v": "output_qty_forecast = WO_qty × yield_rate (e.g. 93% on 100-unit WO = 93 usable units — never use raw WO qty)"
+   },
+   {
+    "k": "Confidence",
+    "v": "Deducted proportionally when yield_rate < 1.0"
+   },
+   {
+    "k": "OT gate",
+    "v": "No OT needed → PROPOSE. OT required → GATE (MFG manager approval, ot_cost_usd shown)"
+   },
+   {
+    "k": "Data source",
+    "v": "CO3 + live MES WIP stage — not production plan. Stage determines realistic exit_date."
+   },
+   {
+    "k": "Priority",
+    "v": "P1 if air freight needed to meet date, P2 if land sufficient (Memo §4.2)"
+   },
+   {
+    "k": "Expedite API",
+    "v": "request_expedite(requires_overtime=False) auto-approved; True → PENDING_GATE (mfg manager)"
+   }
+  ],
+  "inputs": "pn, qty, plant, requested_date",
+  "bapi": [
+   "BAPI_PRODORD_GET_DETAIL (CO3)",
+   "MES API for live WIP stage"
+  ],
+  "tools": [
+   "SAP CO3 (T-code)",
+   "MES system"
+  ],
+  "outputs": "{wo_id, stage, exit_date, yield_rate, output_qty_forecast, expedite_feasible, needs_ot, ot_cost_usd}",
+  "edges": [
+   {
+    "l": "feasible · no OT (PROPOSE)",
+    "cls": "yes",
+    "t": "route_to_approval"
+   },
+   {
+    "l": "feasible · OT (GATE)",
+    "cls": "yes",
+    "t": "route_to_approval"
+   },
+   {
+    "l": "not feasible",
+    "cls": "no",
+    "t": "check_rework (Step 05)"
+   }
+  ],
+  "agent": "res",
+  "policies": [
+   "MFG-01 — LT floor already evaluated by Policy Agent before this step runs"
+  ],
+  "algo": "<div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8 · Step Flow v2</div>\n<div class=\"code-sec\">MES tools — get_wo_status() / request_expedite() <span class=\"src-tag\">Tech Spec v6 §3.4</span></div><code class=\"p-code\">@mcp.tool()\nasync def get_wo_status(wo_id: str = None, pn: str = None) -&gt; dict:\n    &#x27;&#x27;&#x27;Query MES for open work order status.\n    Returns: {wo_id, pn, qty, current_stage, stages_remaining, est_completion,\n              yield_rate, output_qty_forecast, bottleneck_station}&#x27;&#x27;&#x27;\n\n@mcp.tool()\nasync def request_expedite(wo_id: str, reason: str, requires_overtime: bool) -&gt; dict:\n    &#x27;&#x27;&#x27;Submit WO expedite request to MFG Portal.\n    Auto-approved if requires_overtime=False.\n    GATE if requires_overtime=True — routed to mfg manager approval.&#x27;,\n    Returns: {expedite_id, status: APPROVED|PENDING_GATE, new_est_completion}&#x27;&#x27;&#x27;</code>\n<div class=\"code-sec\">Yield deduction in confidence score <span class=\"src-tag\">Tech Spec v6 §6</span></div><code class=\"p-code\"># Deductions for WIP yield risk (output_qty_forecast &lt; qty)\nwo        = state.get(&#x27;wo_result&#x27;, {})\nyield_rt  = wo.get(&#x27;yield_rate&#x27;, 1.0)\nout_qty   = wo.get(&#x27;output_qty_forecast&#x27;, state.get(&#x27;qty&#x27;) or 0)\nreq_qty   = state.get(&#x27;qty&#x27;) or 0\nif yield_rt &lt; 1.0:\n    score -= round((1.0 - yield_rt) * 0.5, 3)\nif req_qty &gt; 0 and out_qty &lt; req_qty:\n    score -= 0.10  # WIP output below requested qty</code>\n<div class=\"code-sec\">Step order note <span class=\"src-tag\">Step Flow v2</span></div><code class=\"p-code\">ORDERING ISSUE — WO expedite: faster, cheaper, higher-certainty → should be Step 04.\nRework → should be Step 05.  (applied in this graph)</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (3)</summary>\n<div class=\"code-sec\">wo_router <span class=\"src-tag\">Tech Spec v6 §2.3</span></div><code class=\"p-code\">builder.add_conditional_edges(&#x27;check_wo&#x27;, wo_router, {\n    &#x27;expedite_ok&#x27;:   &#x27;route_to_approval&#x27;,\n    &#x27;no_expedite&#x27;:   &#x27;check_shortage&#x27;,\n})</code>\n<div class=\"code-sec\">Node → Layer 1 mapping (escalation path) <span class=\"src-tag\">Design Memo v0.8 §4.2</span></div><code class=\"p-code\">check_wo_expedite\n  Layer 1 : check_wo_expedite() → wo_candidates[]\n  SAP     : PP module, work center capacity\n  Notes   : Open WO pull-in. Yield × capacity → realistic output qty.\n            P1 if air freight needed, P2 if land sufficient.\n            Runs only when trunk_satisfied = False.</code>\n<div class=\"code-sec\">SAP T-code — CO03 / BAPI_PRODORD_GET_DETAIL <span class=\"src-tag\">Tech Spec v6 §8.5</span></div><code class=\"p-code\">Returns : Production order header: status (REL/PREL/TECO), scheduled finish,\n          confirmed quantities, and component availability.\n          Cross-check with MES for live WIP stage.\nWhy     : SAP PP has canonical order state; MES may lag.\n          Use SAP as ground truth for scheduled dates; MES for live stage.\nReplaces: MES-only query (no SAP PP cross-check)</code>\n</details>\n"
+ },
+ "s05": {
+  "name": "check_rework",
+  "cat": "STEP 05 / TRIAGE",
+  "desc": "BOM alternative search via CS03. MOQ sourced per PN+plant+vendor from SAP tables. Always routes to PM-specific approval queue for spec-delta validation — never AUTO.",
+  "logic": [
+   {
+    "k": "MOQ source",
+    "v": "MARC.MINBS (production min lot size) + EINA.MINBM (purchasing info record), per PN+plant+vendor — not a global hardcode"
+   },
+   {
+    "k": "Always GATE",
+    "v": "Rework always → PM-specific queue. Spec-delta validation + customer qualification required before any action."
+   },
+   {
+    "k": "BOM alt",
+    "v": "CS03 explosion finds alternative PN with compatible spec. spec_delta field captures deviation for PM review."
+   },
+   {
+    "k": "Policy pre-checked",
+    "v": "T-type MOQ (RWK-01) and N/O phase-out (RWK-02) already evaluated by Policy Agent"
+   },
+   {
+    "k": "No hardcode",
+    "v": "MOQ per PN+plant+vendor — NOT a global 30pcs hardcode; agent_config 30pcs is fallback only"
+   },
+   {
+    "k": "Stock first",
+    "v": "Feasibility requires actual alt_pn stock ≥ qty; MOQ then only adds below_moq + setup_fee (Spec v6 §8.4)"
+   },
+   {
+    "k": "Priority",
+    "v": "Always P1 — quality risk requires planner judgment (Memo §4.2)"
+   }
+  ],
+  "inputs": "pn, qty, plant",
+  "bapi": [
+   "CS_BOM_EXPL_MAT_V2 (CS03)",
+   "Table reads: MARC.MINBS (min lot size), EINA.MINBM (PO info record)"
+  ],
+  "tools": [
+   "SAP CS03 (T-code)",
+   "SAP MB52 (T-code)"
+  ],
+  "outputs": "{feasible, alt_pn, spec_delta, alt_stock_qty, moq, below_moq, setup_fee_usd, requires_pm_approval: always true}",
+  "edges": [
+   {
+    "l": "alt available",
+    "cls": "yes",
+    "t": "route_to_approval (GATE · PM)"
+   },
+   {
+    "l": "not feasible",
+    "cls": "no",
+    "t": "check_shortage (Step 06)"
+   }
+  ],
+  "agent": "res",
+  "policies": [
+   "RWK-01 — T-type below MOQ (pre-checked by Policy Agent)",
+   "RWK-02 — N/O material rework (pre-checked by Policy Agent)"
+  ],
+  "algo": "<div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8 · Step Flow v2</div>\n<div class=\"code-sec\">evaluate_rework_option() — MOQ + rework decision <span class=\"src-tag\">Tech Spec v6 §8.4</span></div><code class=\"p-code\">async def evaluate_rework_option(pn: str, qty: int, plant: str) -&gt; dict:\n    &#x27;&#x27;&#x27;\n    Rework logic:\n    1. Find compatible alt_pn from BOM alternatives\n    2. Check std stock of alt_pn at plant\n    3. Check MOQ: if qty &lt; 30 pcs → flag setup fee → PM approval ALWAYS required\n    4. Check rework cycle time — can it meet requested_date?\n    5. Never auto-propose rework — always routes to PM queue\n    &#x27;&#x27;&#x27;\n    alts = await get_bom_alternatives(pn)\n\n    # Check stock first — feasibility requires actual stock to exist\n    for alt in alts:\n        std_stock = await get_std_stock(alt[&#x27;alt_pn&#x27;], plant)\n        if std_stock[&#x27;unrestricted&#x27;] &gt;= qty:\n            # Stock exists — now check MOQ for this alt_pn\n            moq_info = await check_moq(alt[&#x27;alt_pn&#x27;], qty)\n            return {&#x27;feasible&#x27;: True, &#x27;alt_pn&#x27;: alt[&#x27;alt_pn&#x27;],\n                    &#x27;spec_delta&#x27;: alt[&#x27;spec_delta&#x27;], &#x27;requires_pm_approval&#x27;: True,\n                    &#x27;below_moq&#x27;: moq_info[&#x27;qty_below_moq&#x27;],\n                    &#x27;setup_fee_usd&#x27;: moq_info[&#x27;setup_fee_usd&#x27;] if moq_info[&#x27;qty_below_moq&#x27;] else 0}\n\n    return {&#x27;feasible&#x27;: False}</code>\n<div class=\"code-sec\">MOQ source of truth <span class=\"src-tag\">Step Flow v2 · Tech Spec v6 §4.1</span></div><code class=\"p-code\">MOQ = SAP MARC.MINBS (production min lot size) + EINA.MINBM (purchasing info record),\n      per PN + plant + vendor.\nagent_config (&#x27;moq_setup_fee_threshold_pcs&#x27;, &#x27;30&#x27;) is FALLBACK ONLY — not a global hardcode.</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (4)</summary>\n<div class=\"code-sec\">SAP / SRM tools <span class=\"src-tag\">Tech Spec v6 §3.1 / §3.5</span></div><code class=\"p-code\">@mcp.tool()\nasync def get_bom_alternatives(pn: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Find compatible substitute PNs from SAP classification / BOM alt items.\n    Returns: [{alt_pn, spec_delta, requires_rework: bool, moq, unit_price}]&#x27;&#x27;&#x27;\n\n@mcp.tool()\nasync def get_std_stock(pn: str, plant: str) -&gt; dict:\n    &#x27;&#x27;&#x27;SAP MB52 standard stock query.\n    Returns: {unrestricted, in_quality, blocked, transit, valuation_price}&#x27;&#x27;&#x27;\n\n@mcp.tool()\nasync def check_moq(pn: str, qty: int) -&gt; dict:\n    &#x27;&#x27;&#x27;Check MOQ rules and setup fee for a PN.\n    Returns: {moq, qty_below_moq: bool, setup_fee_usd, pm_approval_required: bool}&#x27;&#x27;&#x27;</code>\n<div class=\"code-sec\">rework_router <span class=\"src-tag\">Tech Spec v6 §2.3</span></div><code class=\"p-code\">builder.add_conditional_edges(&#x27;check_rework&#x27;, rework_router, {\n    &#x27;rework_feasible&#x27;:&#x27;route_to_approval&#x27;,\n    &#x27;no_rework&#x27;:     &#x27;check_wo&#x27;,\n})</code>\n<div class=\"code-sec\">Node → Layer 1 mapping (escalation path) <span class=\"src-tag\">Design Memo v0.8 §4.2</span></div><code class=\"p-code\">check_rework\n  Layer 1 : check_rework_pool() → rework_candidates[]\n  SAP     : Z-table or QM module (TBD — Open Question #2)\n  Notes   : Yield-adjusted qty and expected release date.\n            Always P1: quality risk requires planner judgment.</code>\n<div class=\"code-sec\">Cache policy <span class=\"src-tag\">Tech Spec v6 §7</span></div><code class=\"p-code\">BOM alternatives  bom_alt:{pn}  TTL 1 hr   — SAP CS03 call; BOM version tracked\nMOQ rules         moq:{pn}      TTL 24 hrs — Sourcing system call; static master data</code>\n</details>\n"
+ },
+ "s06": {
+  "name": "check_shortage",
+  "cat": "STEP 06 / TRIAGE",
+  "desc": "CS03 BOM explosion + SRM supplier commits. Root-cause classifier determines escalation target. Routes directly to compose_response as ESCALATE — shortage is not an approvable action.",
+  "logic": [
+   {
+    "k": "Root cause",
+    "v": "supplier_commit_low → Sourcing · iqc_hold → QM · customs_delay → Logistics · bom_error → Engineering/PLM · unknown → Sourcing (default)"
+   },
+   {
+    "k": "OI-03 fix",
+    "v": "Shortage routes DIRECTLY to compose_response as ESCALATE — does NOT enter route_to_approval queue"
+   },
+   {
+    "k": "No action",
+    "v": "Shortage has no approvable SAP action — escalation path only, earliest_possible_date surfaced for planner awareness"
+   },
+   {
+    "k": "forecast_error",
+    "v": "→ Demand Planning (demand was not planned) — Spec v6 §8.0d"
+   },
+   {
+    "k": "Classifier input",
+    "v": "supplier_commit.confidence + QI flags; default to Sourcing only if cause cannot be determined"
+   }
+  ],
+  "inputs": "pn, qty, plant",
+  "bapi": [
+   "CS_BOM_EXPL_MAT_V2 (CS03)",
+   "SRM: get_supplier_commit()"
+  ],
+  "tools": [
+   "SAP CS03 (T-code)",
+   "SRM Supplier Portal"
+  ],
+  "outputs": "{shortage_pns[], supplier_commits[], root_cause, escalation_target, earliest_possible_date}",
+  "edges": [
+   {
+    "l": "always → ESCALATE",
+    "cls": "esc",
+    "t": "compose_response (root-cause routed)"
+   }
+  ],
+  "agent": "res",
+  "algo": "<div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8</div>\n<div class=\"code-sec\">SHORTAGE_ESCALATION_ROUTING <span class=\"src-tag\">Tech Spec v6 §8.0d</span></div><code class=\"p-code\">SHORTAGE_ESCALATION_ROUTING = {\n    &#x27;supplier_commit_low&#x27;:  &#x27;Sourcing team&#x27;,    # supplier qty or date issue\n    &#x27;iqc_hold&#x27;:             &#x27;QM team&#x27;,          # IQC blocking incoming goods\n    &#x27;customs_delay&#x27;:        &#x27;Logistics team&#x27;,   # customs clearance issue\n    &#x27;bom_error&#x27;:            &#x27;Engineering/PLM&#x27;,  # BOM wrong or not released\n    &#x27;forecast_error&#x27;:       &#x27;Demand Planning&#x27;,  # demand was not planned\n}\n# Agent reads supplier_commit.confidence + QI flags to classify root cause\n# before routing. Default to Sourcing only if cause cannot be determined.</code>\n<div class=\"code-sec\">MD04 / MD05 — earliest supply receipt <span class=\"src-tag\">Tech Spec v6 §8.5</span></div><code class=\"p-code\">MD04 / MD05 shows all planned receipts and demand lines on a timeline.\nUse to identify the earliest date a sufficient supply receipt will cover the shortage.\nMD04 shows WHEN supply arrives; CO09 shows IF it covers the request.</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (4)</summary>\n<div class=\"code-sec\">SAP / SRM tools <span class=\"src-tag\">Tech Spec v6 §3.1 / §3.5</span></div><code class=\"p-code\">@mcp.tool()\nasync def get_bom_components(pn: str, qty: int, plant: str) -&gt; dict:\n    &#x27;&#x27;&#x27;SAP CS03 BOM explosion.\n    Returns: [{component_pn, required_qty, available_qty, shortage_qty, unit}]&#x27;&#x27;&#x27;\n\n@mcp.tool()\nasync def get_supplier_commit(pn: str, supplier_id: str = None) -&gt; dict:\n    &#x27;&#x27;&#x27;Latest supplier commit date from SRM portal sync.\n    Returns: {pn, supplier_id, commit_date, commit_qty, confidence, last_synced}&#x27;&#x27;&#x27;</code>\n<div class=\"code-sec\">Edge — no approval queue <span class=\"src-tag\">Tech Spec v6 §2.3</span></div><code class=\"p-code\">builder.add_edge(&#x27;check_shortage&#x27;,    &#x27;compose_response&#x27;)  # ESCALATE — no approval queue, direct to response</code>\n<div class=\"code-sec\">Node → Layer 1 mapping <span class=\"src-tag\">Design Memo v0.8 §4.2</span></div><code class=\"p-code\">check_shortage\n  Layer 1 : reads route_result.shortfall_qty — no new function call\n  Notes   : If shortfall_qty &gt; 0 after all sources exhausted,\n            surfaces PARTIAL as P1 alert. Calls propose_fulfillment_action().</code>\n<div class=\"code-sec\">Cache policy <span class=\"src-tag\">Tech Spec v6 §7</span></div><code class=\"p-code\">Supplier commit dates  supp:{pn}:{supp_id}  TTL 4 hrs — SRM portal sync; flag if commit date is tomorrow</code>\n</details>\n"
+ },
+ "rta": {
+  "name": "route_to_approval",
+  "cat": "HUMAN OVERSIGHT / GATE",
+  "desc": "Approval hub for all feasible proposals from Steps 02–05. All actions are planner suggestions — no action is auto-posted in any phase. Priority classification determines urgency and approver routing.",
+  "logic": [
+   {
+    "k": "All = P.Review",
+    "v": "Every action enters PENDING_REVIEW queue — no auto-post in any phase"
+   },
+   {
+    "k": "Priority 1",
+    "v": "Air freight (any source) · LATE segment (eta > required_date) · PARTIAL fill (qty not fully covered)"
+   },
+   {
+    "k": "Priority 2",
+    "v": "Land delivery · dropship land · wait-after-GR · STO reroute land"
+   },
+   {
+    "k": "GATE rule",
+    "v": "air cost > $3,000 → GATE · rework → always GATE (PM queue) · approval window = 4 hours"
+   },
+   {
+    "k": "Rejected",
+    "v": "Rejected proposals route to compose_response with rejected resolution path shown to user"
+   },
+   {
+    "k": "STO qty",
+    "v": "STO qty < 50 pcs → PROPOSE (agent_config sto_auto_approve_qty)"
+   },
+   {
+    "k": "Commit shift",
+    "v": "Commit date shift > 5 days requires planner ack (commit_shift_gate_days)"
+   },
+   {
+    "k": "Timeout",
+    "v": "Rejected or expired (4 h) → fallback_path → compose_response"
+   }
+  ],
+  "inputs": "Proposed action payload from triage steps",
+  "bapi": [],
+  "tools": [
+   "agent_config table (PostgreSQL)",
+   "Notification: email / Slack"
+  ],
+  "outputs": "{approved: bool, approver_id, approved_at, action_type, cost_usd, review_priority}",
+  "edges": [
+   {
+    "l": "approved",
+    "cls": "yes",
+    "t": "execute_action"
+   },
+   {
+    "l": "rejected",
+    "cls": "esc",
+    "t": "compose_response"
+   }
+  ],
+  "algo": "<div class=\"algo-group\">LangGraph Logic Flow (original)</div>\n<div class=\"code-sec\">Review Priority Classification</div><code class=\"p-code\">def classify_review_priority(route, required_date, status):\n    if 'AIR' in route.action:\n        return 1   # air freight → always Priority 1\n    if route.effective_date > required_date:\n        return 1   # LATE segment\n    if status == 'PARTIAL':\n        return 1   # cannot fully fulfill order qty\n    return 2       # standard review\n\nqueue_item = {\n    'priority':   classify_review_priority(route, required_date, status),\n    'status':     'PENDING_REVIEW',  # never auto_posted\n    'action':     route.action,\n    'approver':   route_approver(route),  # from agent_config\n    'expires_at': now + timedelta(hours=4)\n}</code><details class=\"impl-ref\"><summary>實作參考 · Implementation reference (4)</summary>\n<div class=\"code-sec\">Approval Queue — Redis Streams <span class=\"src-tag\">Tech Spec v6 §7.1</span></div><code class=\"p-code\"># Approval request written to Redis Stream\nXADD approval_queue * \\\n    request_id   {request_id} \\\n    approval_id  {approval_id} \\\n    approval_type AIR_COST \\\n    cost_usd     4200 \\\n    assigned_to  manager@company.com \\\n    expires_at   {now + 4h ISO8601} \\\n    action_data  &#x27;{...json...}&#x27;\n\n# Approval UI reads from stream, writes decision back\n# LangGraph resumes thread_id when decision event received\nXADD approval_decisions * \\\n    approval_id  {approval_id} \\\n    decision     APPROVED \\\n    decided_by   manager@company.com \\\n    decided_at   {timestamp}</code>\n<div class=\"code-sec\">atp_approvals — approval queue table <span class=\"src-tag\">Tech Spec v6 §4.1</span></div><code class=\"p-code\">CREATE TABLE atp_approvals (\n    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    request_id          UUID NOT NULL REFERENCES atp_requests(id),\n    approval_type       VARCHAR(30) NOT NULL,\n    -- AIR_COST | STO_CREATE | WO_EXPEDITE | REWORK | SCRAP_TRANSFER | ESCALATE\n    action_data         JSONB NOT NULL,         -- full action details for approver\n    cost_usd            DECIMAL(12,2),          -- cost requiring approval\n    cost_threshold_usd  DECIMAL(12,2),\n    status              VARCHAR(20) NOT NULL DEFAULT &#x27;PENDING&#x27;,\n    -- PENDING | APPROVED | REJECTED | EXPIRED | CANCELLED\n    assigned_to         VARCHAR(200),           -- email of assigned approver\n    decided_by          VARCHAR(200),           -- actual approver\n    decision_reason     TEXT,\n    expires_at          TIMESTAMPTZ NOT NULL,   -- NOW() + 4 hours\n    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),\n    decided_at          TIMESTAMPTZ\n);\nCREATE INDEX idx_atp_approvals_status     ON atp_approvals(status);\nCREATE INDEX idx_atp_approvals_assigned   ON atp_approvals(assigned_to);\nCREATE INDEX idx_atp_approvals_expires_at ON atp_approvals(expires_at);</code>\n<div class=\"code-sec\">agent_config — runtime thresholds (seed) <span class=\"src-tag\">Tech Spec v6 §4.1</span></div><code class=\"p-code\">CREATE TABLE agent_config (\n    key                 VARCHAR(100) PRIMARY KEY,\n    value               JSONB NOT NULL,\n    description         TEXT,\n    updated_by          VARCHAR(100),\n    updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n\n-- Seed data\nINSERT INTO agent_config VALUES\n(&#x27;air_freight_gate_threshold_usd&#x27;, &#x27;3000&#x27;,   &#x27;Air freight cost above this requires GATE&#x27;),\n(&#x27;commit_shift_gate_days&#x27;,         &#x27;5&#x27;,       &#x27;Commit date shift &gt; N days requires planner ack&#x27;),\n(&#x27;sto_auto_approve_qty&#x27;,           &#x27;50&#x27;,      &#x27;STO qty below this is PROPOSE (not GATE)&#x27;),\n(&#x27;moq_setup_fee_threshold_pcs&#x27;,    &#x27;30&#x27;,      &#x27;Orders below this pcs incur setup fee&#x27;),\n(&#x27;approval_expiry_hours&#x27;,          &#x27;4&#x27;,       &#x27;Approval queue items expire after N hours&#x27;),\n(&#x27;confidence_min_auto&#x27;,            &#x27;0.75&#x27;,    &#x27;Below this: human review recommended&#x27;);</code>\n<div class=\"code-sec\">Interrupt compile <span class=\"src-tag\">Tech Spec v6 §2.3</span></div><code class=\"p-code\"># Human interrupt nodes\ngraph = builder.compile(\n    checkpointer=AsyncPostgresSaver(conn),\n    interrupt_before=[&#x27;collect_air_form&#x27;, &#x27;route_to_approval&#x27;],\n)</code>\n</details>\n",
+  "agent": "res"
+ },
+ "exec": {
+  "name": "execute_action",
+  "cat": "ACTION / SUCCESS PATH",
+  "desc": "Translates approved proposals into concrete SAP action steps. All outputs are planner suggestions — no action is auto-posted in any phase. Priority 1 items flagged for urgent attention.",
+  "logic": [
+   {
+    "k": "All = suggest",
+    "v": "Every action is PENDING_REVIEW — agent proposes, planner executes"
+   },
+   {
+    "k": "Priority 1",
+    "v": "Air freight · LATE segments · PARTIAL fills — flagged, appear first in review queue"
+   },
+   {
+    "k": "Priority 2",
+    "v": "Land delivery · dropship land · wait after GR — standard review"
+   },
+   {
+    "k": "Split order",
+    "v": "Any source type: split allowed when available qty meets partial date. Segments with eta > required_date auto-elevate to P1"
+   },
+   {
+    "k": "Phases",
+    "v": "Phase 1/2: PROPOSE only — human confirms before execution. Phase 3: AUTO possible below AUTO threshold."
+   }
+  ],
+  "inputs": "Approved action payload",
+  "bapi": [
+   "BAPI_GOODSMVT_CREATE (STO creation)",
+   "TMS air booking API endpoint",
+   "MFG Portal: submit_expedite()"
+  ],
+  "tools": [
+   "SAP RFC (write scope)",
+   "TMS booking API",
+   "MFG Portal API"
+  ],
+  "outputs": "{action_id, executed_at, status, affected_order_id}",
+  "edges": [
+   {
+    "l": "always",
+    "cls": "yes",
+    "t": "compose_response"
+   }
+  ],
+  "algo": "<div class=\"algo-group\">LangGraph Logic Flow (original)</div>\n<div class=\"code-sec\">Tool 5 — build_sap_steps() — All actions PENDING_REVIEW</div><code class=\"p-code\">SAP_STEPS = {\n  'CREATE_DELIVERY':\n    ['VL01N → outbound delivery from WH'],\n\n  'DELIVER_AFTER_GR':            # in-transit STO: wait only\n    ['MIGO → confirm GR at receiving plant',\n     'VL01N → outbound delivery from WH'],\n\n  'DELIVER_VIA_WH_LAND':\n    ['STO proceeds on original route to WH',\n     'VL01N → outbound from WH (land)'],\n\n  'DELIVER_VIA_WH_AIR':          # ← PRIORITY 1\n    ['Air booking via TMS / 3PL',\n     'VL01N → outbound from WH (air)'],\n\n  'SPLIT_STO_DROPSHIP_LAND':\n    ['ME22N → split STO line item',\n     '  └ Line 1: remainder qty → original WH (unchanged)',\n     '  └ Line 2: redirected qty → customer / hub',\n     'VL01N → outbound from MFG plant (land)'],\n\n  'SPLIT_STO_DROPSHIP_AIR':      # ← PRIORITY 1\n    ['ME22N → split STO line item',\n     '  └ Line 1: remainder qty → original WH (unchanged)',\n     '  └ Line 2: redirected qty → customer / hub',\n     'Air booking via TMS',\n     'VL01N → outbound from MFG plant (air)'],\n\n  'REWORK_PM_QUEUE':\n    ['CS03 → BOM alternative confirmed by PM',\n     'Submit to PM approval queue (spec-delta validation)',\n     'MD04 / CO9 → re-check ATP after approval'],\n}\n\n# After any STO split or reroute:\n# MD04 / CO9 → re-check ATP to confirm availability</code><div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8</div>\n<div class=\"code-sec\">Design decision — no auto-posting <span class=\"src-tag\">Design Memo v0.8 §8</span></div><code class=\"p-code\">All actions are recommendations — no auto-posting.\nATP affects customer promises and inventory commitments. Planner executes.</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (2)</summary>\n<div class=\"code-sec\">Write tools (all require approval) <span class=\"src-tag\">Tech Spec v6 §3.1 / §3.3 / §3.4</span></div><code class=\"p-code\">@mcp.tool()\nasync def create_sto(from_plant: str, to_plant: str, pn: str, qty: int,\n                     cost_center: str, urgency_reason: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Create SAP Stock Transfer Order (write — requires PROPOSE approval).\n    Returns: {sto_id, created_at, status}&#x27;&#x27;&#x27;\n\n@mcp.tool()\nasync def split_order(order_id: str, split_qty: int, new_plant: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Split open sea order: redirect split_qty to new_plant via air.\n    IMPORTANT: split_qty = min(qty_needed - already_covered, source_co09_atp).\n    Combine partial sources to reach full qty (e.g. WH02 80pcs + WH04 split 20pcs = 100). Pre-condition: container_status in (BOOKING, PRE_LOADING) AND source_co09_atp &gt;= split_qty.\n    Pre-condition: container_status == PRE_LOADING.\n    Returns: {original_order_id, new_order_id, split_qty, status}&#x27;&#x27;&#x27;\n\n@mcp.tool()\nasync def book_airfreight(route: str, pn: str, qty: int,\n                          cost_center: str, approval_id: str) -&gt; dict:\n    &#x27;&#x27;&#x27;Submit air freight booking (GATE — requires approval_id).\n    Returns: {booking_id, confirmed_departure, eta, total_cost_usd}&#x27;&#x27;&#x27;\n\n@mcp.tool()\nasync def request_expedite(wo_id: str, reason: str, requires_overtime: bool) -&gt; dict:\n    &#x27;&#x27;&#x27;Submit WO expedite request to MFG Portal.\n    Auto-approved if requires_overtime=False.\n    GATE if requires_overtime=True — routed to mfg manager approval.&#x27;,\n    Returns: {expedite_id, status: APPROVED|PENDING_GATE, new_est_completion}&#x27;&#x27;&#x27;</code>\n<div class=\"code-sec\">Audit event written on execution <span class=\"src-tag\">Tech Spec v6 §4.1</span></div><code class=\"p-code\">event_type = &#x27;ACTION_EXECUTED&#x27;\nevent_data = {action_type, result, sap_doc_id}</code>\n</details>\n",
+  "agent": "res"
+ },
+ "compose": {
+  "name": "compose_response",
+  "cat": "OUTPUT / RESPONSE",
+  "desc": "Builds agent response using Claude API (stream=True). ALWAYS includes: qty, commit_date (GR-inclusive), confidence% (yield-adjusted), binding constraint, policy_flags[], ranked options (★ recommended). Streams partial updates as each tool returns. STEP mode: single best option + restricted stock advisory if QI/blocked detected. ALL mode: P1/P2/P3 ranked cards + combination suggestion. Escalation rows include escalation_target from root-cause classifier.",
+  "inputs": "Resolution path + policy_verdicts + ranked_actions",
+  "bapi": [],
+  "tools": [
+   "Claude API (stream=True)",
+   "WebSocket stream",
+   "Claude API (claude-sonnet-4-5, stream=True)"
+  ],
+  "outputs": "Streamed: qty · commit_date · confidence · policy_flags · ranked options ★ · action buttons",
+  "edges": [
+   {
+    "l": "after stream",
+    "cls": "",
+    "t": "HITL-3 interrupt → write_audit_log"
+   }
+  ],
+  "agent": "compose",
+  "algo": "<div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8</div>\n<div class=\"code-sec\">RESPONSE_SYSTEM_PROMPT <span class=\"src-tag\">Tech Spec v6 §5.2</span></div><code class=\"p-code\">RESPONSE_SYSTEM_PROMPT = &#x27;&#x27;&#x27;\nYou are the ATP Fulfillment Agent. Write a clear, concise commit response.\nThe response must include:\n1. The proposed commit date (or why one cannot be given)\n2. Which constraint is binding and why\n3. What action is required next (and from whom)\n4. Key risks the requester should know about\n\nTone: direct, confident, no hedging. This is a business commitment.\nLength: 3-5 sentences maximum for the main message, then structured data.\nDo NOT mention system names (SAP, iSCM) in the user-facing message.\n&#x27;&#x27;&#x27;</code>\n<div class=\"code-sec\">calculate_confidence() — deterministic <span class=\"src-tag\">Tech Spec v6 §6</span></div><code class=\"p-code\">def calculate_confidence(state: ATPAgentState) -&gt; float:\n    score = 1.0\n\n    # Deductions for data staleness\n    freshness = state[&#x27;data_freshness&#x27;]\n    for system, last_ts in freshness.items():\n        age_minutes = (now() - parse_ts(last_ts)).seconds / 60\n        ttl = SYSTEM_TTL[system]           # e.g. SAP=15min, iSCM=60min, TMS=realtime\n        if age_minutes &gt; ttl:\n            score -= 0.10                  # stale data: -0.10 per system\n        elif age_minutes &gt; ttl * 0.8:\n            score -= 0.04                  # approaching stale: -0.04\n\n    # Deductions for missing fields\n    if not state[&#x27;order_id&#x27;]:   score -= 0.08\n    if not state[&#x27;pn&#x27;]:         score -= 0.10\n    if not state[&#x27;qty&#x27;]:        score -= 0.06\n\n    # Deductions for sole-source risk\n    inv = state.get(&#x27;inventory_result&#x27;, {})\n    if inv.get(&#x27;source_plant_count&#x27;, 2) == 1:\n        score -= 0.08    # only one plant option\n\n    # Deductions for tight time windows\n    ship = state.get(&#x27;shipping_result&#x27;, {})\n    if ship.get(&#x27;air_buffer_hours&#x27;, 24) &lt; 4:\n        score -= 0.10    # booking cutoff very close\n\n    # Deductions for GATE pending (cost approval outstanding)\n    if state.get(&#x27;pending_approval&#x27;):\n        score -= 0.05\n\n    # Deductions for WIP yield risk (output_qty_forecast &lt; qty)\n    wo        = state.get(&#x27;wo_result&#x27;, {})\n    yield_rt  = wo.get(&#x27;yield_rate&#x27;, 1.0)\n    out_qty   = wo.get(&#x27;output_qty_forecast&#x27;, state.get(&#x27;qty&#x27;) or 0)\n    req_qty   = state.get(&#x27;qty&#x27;) or 0\n    if yield_rt &lt; 1.0:\n        score -= round((1.0 - yield_rt) * 0.5, 3)\n    if req_qty &gt; 0 and out_qty &lt; req_qty:\n        score -= 0.10  # WIP output below requested qty\n\n    return max(0.0, round(score, 3))\n\n# Routing based on confidence\n# &gt;= 0.80: AUTO response to user\n# 0.65-0.79: PROPOSE (flag low-confidence fields)\n# &lt; 0.65: GATE — planner review recommended</code>\n<div class=\"code-sec\">LLM reads transport_mode <span class=\"src-tag\">Design Memo v0.8 §5.2.4</span></div><code class=\"p-code\"># LLM at compose_response sees transport_mode and decides:\n#   AIR -&gt; flag P1, check if approval form required\n#   SEA / LAND -&gt; P2 standard review</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (1)</summary>\n<div class=\"code-sec\">Node → Layer 1 mapping <span class=\"src-tag\">Design Memo v0.8 §4.3</span></div><code class=\"p-code\">compose_response\n  Layer 1 : propose_fulfillment_action() → {priority_1_review, priority_2_review}\n  Phase 1 : call directly from node, return structured dict\n  Phase 2 : LLM calls it as a tool and formats output for planner</code>\n</details>\n",
+  "logic": [
+   {
+    "k": "Confidence route",
+    "v": "≥ 0.80 AUTO · 0.65–0.79 PROPOSE (flag low-confidence fields) · < 0.65 GATE (Spec §6)"
+   },
+   {
+    "k": "Yield deduction",
+    "v": "−(1−yield_rate)×0.5 and −0.10 if output_qty_forecast < qty (OI-08)"
+   }
+  ]
+ },
+ "audit": {
+  "name": "write_audit_log",
+  "cat": "UTILITY / AUDIT",
+  "desc": "Writes immutable audit log entry to PostgreSQL. Fields: request_id, pn, qty, requested_date, resolution_path, commit_date, confidence, action_required, constraint values, data freshness timestamps, approval records. REVOKE UPDATE/DELETE from agent database user. Phase 3 hard requirement: zero gaps.",
+  "inputs": "Full ATPAgentState at resolution",
+  "bapi": [],
+  "tools": [
+   "PostgreSQL (atp_audit_log table)"
+  ],
+  "outputs": "{audit_id, written_at, request_id, resolution_summary}",
+  "edges": [
+   {
+    "l": "always",
+    "cls": "",
+    "t": "END"
+   }
+  ],
+  "agent": "compose",
+  "algo": "<div class=\"algo-group\">Tech Spec v6</div>\n<div class=\"code-sec\">atp_audit_log — append-only, immutable <span class=\"src-tag\">Tech Spec v6 §4.1</span></div><code class=\"p-code\">CREATE TABLE atp_audit_log (\n    id                  BIGSERIAL PRIMARY KEY,\n    request_id          UUID NOT NULL REFERENCES atp_requests(id),\n    event_type          VARCHAR(50) NOT NULL,\n    -- e.g. TRIAGE_STEP_STARTED | TOOL_CALLED | APPROVAL_REQUESTED |\n    --      APPROVAL_RECEIVED | ACTION_EXECUTED | RESPONSE_SENT | ERROR\n    event_data          JSONB NOT NULL DEFAULT &#x27;{}&#x27;,\n    -- for TOOL_CALLED: {tool_name, system, input, output, latency_ms}\n    -- for APPROVAL_RECEIVED: {approver_id, decision, cost_approved}\n    -- for ACTION_EXECUTED: {action_type, result, sap_doc_id}\n    actor               VARCHAR(100),           -- agent | user_id | system\n    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);\n-- CRITICAL: no UPDATE or DELETE on this table\n-- Enforce with PostgreSQL row security or application-level constraint\nREVOKE UPDATE, DELETE ON atp_audit_log FROM atp_agent_user;</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (1)</summary>\n<div class=\"code-sec\">atp_resolutions <span class=\"src-tag\">Tech Spec v6 §4.1</span></div><code class=\"p-code\">CREATE TABLE atp_resolutions (\n    id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),\n    request_id          UUID NOT NULL REFERENCES atp_requests(id),\n    resolution_path     VARCHAR(20) NOT NULL,   -- 02|03|04|05|06|ESCALATE\n    commit_date         DATE,\n    confidence_score    DECIMAL(4,3),           -- 0.000 to 1.000\n    binding_constraint  TEXT,\n    action_required     VARCHAR(20) NOT NULL,   -- AUTO|PROPOSE|GATE|ESCALATE\n    risk_flags          JSONB NOT NULL DEFAULT &#x27;[]&#x27;,\n    -- Each step result stored as JSONB\n    shipping_result     JSONB,\n    inventory_result    JSONB,\n    rework_result       JSONB,\n    wo_result           JSONB,\n    shortage_result     JSONB,\n    options_ranked      JSONB,                  -- used in ALL mode\n    data_freshness      JSONB NOT NULL DEFAULT &#x27;{}&#x27;,\n    triage_steps_taken  INTEGER[],              -- [2,3] means steps 02 and 03 were checked\n    response_time_ms    INTEGER,                -- total time from trigger to response\n    created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()\n);</code>\n</details>\n"
+ },
+ "end": {
+  "name": "END",
+  "cat": "SYSTEM · TERMINAL",
+  "desc": "Graph execution complete. Thread is closed. WebSocket connection remains open for follow-up questions.",
+  "inputs": "Audit log confirmation",
+  "bapi": [],
+  "tools": [],
+  "outputs": "Session available for follow-up",
+  "edges": [],
+  "agent": "compose",
+  "algo": "<div class=\"algo-group\">Tech Spec v6</div>\n<div class=\"code-sec\">Terminal edge <span class=\"src-tag\">Tech Spec v6 §2.3</span></div><code class=\"p-code\">builder.add_edge(&#x27;compose_response&#x27;,  END)</code>\n"
+ },
+ "optdf": {
+  "name": "options_df_collector",
+  "cat": "ALL MODE / COLLECT",
+  "desc": "Collects one row per triage step regardless of feasibility. WO rows use output_qty_forecast (WO_qty × yield_rate) not raw WO qty. Infeasible rows have commit_date=NaT. Columns: step, feasible, commit_date, eta_at_dest, cost_usd, action_required, confidence, notes, escalate_to, raw_result.",
+  "inputs": "Results from asyncio.gather (all 6 steps)",
+  "bapi": [],
+  "tools": [
+   "pandas DataFrame (in-memory)"
+  ],
+  "outputs": "options_df: DataFrame with one row per step",
+  "edges": [
+   {
+    "l": "always",
+    "cls": "",
+    "t": "rank_options(df)"
+   }
+  ],
+  "agent": "res",
+  "algo": "<div class=\"algo-group\">Tech Spec v6 · Design Memo v0.8</div>\n<div class=\"code-sec\">Parallel fan-out — asyncio.gather <span class=\"src-tag\">Tech Spec v6 §8.7.1</span></div><code class=\"p-code\">results = await asyncio.gather(\n    check_dest_atp(pn, dest_plant, qty, requested_date),\n    check_shipping_feasibility(pn, from_plant, dest, get_transit_days),\n    check_inventory_sto(pn, all_plants, qty, requested_date),\n    check_rework_options(pn, qty, plant),\n    check_wo_expedite(pn, qty, plant, requested_date),\n    check_shortage_root(pn, qty, plant),\n    return_exceptions=True  # one failure never blocks others\n)</code>\n<div class=\"code-sec\">Collect into options_df <span class=\"src-tag\">Tech Spec v6 §8.7.2</span></div><code class=\"p-code\"># options_df — one row appended per step regardless of feasibility\n# col            dtype      description\n# step           str        01 | 02 | 03 | 04 | 05 | 06\n# feasible       bool       True if step can meet requested_date\n# commit_date    date|NaT   destination arrival date\n# eta_at_dest    date|NaT   from Shipping Schedule\n# cost_usd       float|NaN  0 if free, NaN if unknown\n# action         str        AUTO | PROPOSE | GATE | ESCALATE\n# confidence     float      0.0 - 1.0\n# notes          str        advisories, stock type warnings</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (2)</summary>\n<div class=\"code-sec\">Batch mode — asyncio parallel Tool 3 (after batch RFC) <span class=\"src-tag\">Design Memo v0.8 §6.4.4</span></div><code class=\"p-code\">import asyncio\n\n\nasync def process_order(order, stock_pool, sto_pool):\n    stock = stock_pool.get(order.material, [])\n    sto   = sto_pool.get(order.material, [])\n    return find_fastest_atp_route(order, stock, sto)  # pure Python\n\n\nasync def run_batch(orders):\n    # Step 1: batch RFC — sequential, paid once\n    stock_pool = await fetch_stock_batch_async(all_materials)\n    sto_pool   = await fetch_sto_batch_async(all_materials)\n\n\n    # Step 2: Tool 3 for all orders — parallel, no SAP calls\n    tasks   = [process_order(o, stock_pool, sto_pool) for o in orders]\n    results = await asyncio.gather(*tasks)\n    return results\n\n\n# Note: stock pool deduction must happen AFTER all routes computed\n# (parallel Tool 3 means deduction order is no longer sequential)\n# → run deductions in priority order after asyncio.gather() returns</code>\n<div class=\"code-sec\">Batch RFC + pool cache <span class=\"src-tag\">Design Memo v0.8 §6.4.2–6.4.3</span></div><code class=\"p-code\"># BEFORE: 200 RFC calls\nfor order in orders:\n    result = call_bapi_material_availability(order.material)\n\n\n# AFTER: 1 RFC call\nall_materials = list({o.material for o in orders})\nstock_pool = call_bapi_material_availability_batch(all_materials)\n# SAP returns ATP for all materials in one round trip\n\n# global_stock_pool acts as the cache\n# Already in the state schema — extend it to serve as cache too\n\n\n# At batch start: bulk fetch all materials once\nglobal_stock_pool = fetch_available_stock_batch(all_materials)\n\n\n# Per order: read from pool, never re-query SAP\nfor order in order_queue:\n    stock = global_stock_pool.get(order.material, [])\n    sto   = global_sto_pool.get(order.material, [])\n    result = find_fastest_atp_route(order, stock, sto)\n\n\n    # Deduct allocated qty — update pool in place\n    for route in result[routes]:\n        if route[source_type] == STOCK:\n            deduct_from_pool(global_stock_pool,\n                             order.material,\n                             route[source_ref],\n                             route[allocated_qty])</code>\n</details>\n",
+  "logic": [
+   {
+    "k": "Fail-safe",
+    "v": "return_exceptions=True — one step failure never blocks the others"
+   },
+   {
+    "k": "Deduction",
+    "v": "In batch mode, stock-pool deduction runs in priority order AFTER gather() returns"
+   }
+  ]
+ },
+ "rank": {
+  "name": "rank_options",
+  "cat": "ALL MODE / RANK",
+  "desc": "Filters feasible=True rows. Sort: cost_usd ASC (primary) · 1−confidence ASC (yield-adjusted, secondary) · eta_at_dest ASC (tertiary). Assigns rank column. rank==1 → recommended=True. Infeasible rows appended last with rank=None. Step 06 rows: escalate_to set from root-cause classifier.",
+  "inputs": "options_df (all steps, one row each)",
+  "bapi": [],
+  "tools": [
+   "pandas sort_values (in-memory)"
+  ],
+  "outputs": "options_ranked_df: sorted · rank col · recommended bool · escalate_to col",
+  "edges": [
+   {
+    "l": "ranked df",
+    "cls": "yes",
+    "t": "compose_response"
+   }
+  ],
+  "agent": "res",
+  "algo": "<div class=\"algo-group\">Tech Spec v6</div>\n<div class=\"code-sec\">rank_options() scoring <span class=\"src-tag\">Tech Spec v6 §8.7.3</span></div><code class=\"p-code\">def rank_options(df: pd.DataFrame) -&gt; pd.DataFrame:\n    feasible = df[df.feasible].copy()\n    feasible[&quot;rank_conf&quot;] = 1 - feasible[&quot;confidence&quot;]  # invert: higher = lower score\n    feasible[&quot;rank_eta&quot;]  = (feasible.eta_at_dest - feasible.eta_at_dest.min()).dt.days\n    feasible = feasible.sort_values(\n        [&quot;cost_usd&quot;, &quot;rank_conf&quot;, &quot;rank_eta&quot;], ascending=[True, True, True]\n    ).reset_index(drop=True)\n    feasible[&quot;rank&quot;]        = feasible.index + 1\n    feasible[&quot;recommended&quot;] = feasible[&quot;rank&quot;] == 1\n    infeasible = df[~df.feasible].assign(rank=None, recommended=False)\n    return pd.concat([feasible, infeasible], ignore_index=True)</code>\n<div class=\"code-sec\">Early-exit rule in ALL mode <span class=\"src-tag\">Tech Spec v6 §8.7.4</span></div><code class=\"p-code\"># Step 01 still runs first. If dest CO09 ATP &gt;= qty AND eta &lt;= requested_date:\n#   return single AUTO result immediately — skip asyncio.gather entirely.\n# This avoids unnecessary parallel queries when stock is already available.</code>\n<details class=\"impl-ref\"><summary>實作參考 · Implementation reference (1)</summary>\n<div class=\"code-sec\">options_ranked_df — output contract <span class=\"src-tag\">Tech Spec v6 §2.1b</span></div><code class=\"p-code\"># options_ranked_df — one row per triage step\n# col               dtype    description\n# rank              int|None 1 (None for infeasible rows)\n# step              str      03\n# step_name         str      sto | air | expedite | rework | shortage\n# feasible          bool     True\n# commit_date       date     2025-06-11\n# eta_at_dest       date     2025-06-10\n# cost_usd          float    1200.0\n# action_required   str      PROPOSE | GATE | AUTO | ESCALATE\n# confidence        float    0.82\n# recommended       bool     True  — rank == 1\n# notes             str      advisory text and stock warnings</code>\n</details>\n"
+ },
+ "policy": {
+  "agent": "policy",
+  "name": "evaluate_policy",
+  "cat": "POLICY AGENT ★ NEW",
+  "desc": "LLM reads atp_policy.txt and evaluates every candidate option in options_df. Outputs BLOCK, FLAG, or PASS per option with reasoning. BLOCKed options go directly to compose_response as rejections. FLAGged options proceed to Resolution with warnings attached. This node is the key differentiator from pure automation — the LLM reasons about business rules, not pattern-matches them.",
+  "logic": [
+   {
+    "k": "Input",
+    "v": "options_df from Inventory Agent + atp_policy.txt document"
+   },
+   {
+    "k": "BLOCK",
+    "v": "Option violates a hard policy → skip Resolution, compose rejection reason"
+   },
+   {
+    "k": "FLAG",
+    "v": "Option has a soft issue → proceed to Resolution with warning in response"
+   },
+   {
+    "k": "PASS",
+    "v": "No policy concern → proceed normally"
+   },
+   {
+    "k": "Dynamic",
+    "v": "Policy file is editable — no code redeployment needed to change rules"
+   }
+  ],
+  "inputs": "options_df + atp_policy.txt",
+  "bapi": [],
+  "tools": [
+   "read_policy_file(\"atp_policy.txt\")",
+   "ATP_change_history_query (past 30d)",
+   "material_status_read (N/O flag)",
+   "LTB_date_lookup"
+  ],
+  "outputs": "policy_verdicts[]: {option_id, verdict, policy_codes[], block_reason, flag_messages[]}",
+  "policies": [
+   "ALL — see atp_policy.txt"
+  ],
+  "algo": "<div class=\"algo-group\">Policy Agent (v3)</div>\n<div class=\"algo-group\">LangGraph Logic Flow (original)</div>\n<div class=\"code-sec\">Policy Evaluation Loop</div><code class=\"p-code\">policy_text = read_policy_file(\"atp_policy.txt\")\n\nfor option in options_df:\n  verdict = llm.evaluate(\n    system  = policy_text,\n    message = f\"Evaluate this option: {option}\"\n  )\n  # Returns: {verdict: BLOCK|FLAG|PASS,\n  #           policy_codes: [...],\n  #           block_reason: \"...\",\n  #           flag_messages: [...]}\n\nblocked  = [o for o in verdicts if o.verdict == 'BLOCK']\nto_resolve = [o for o in verdicts if o.verdict != 'BLOCK']</code>\n<div class=\"code-sec\">Example: MFG-01 LT Floor</div><code class=\"p-code\">Input: \"No stock. MTO product. Customer wants delivery in 2 weeks.\"\nPolicy MFG-01: MTO minimum LT = 4 weeks.\n\nVerdict: FLAG (not BLOCK — we can still offer earliest possible)\nflag_message: \"Cannot meet 2-week target. MTO LT = 4w.\n              Earliest commit = today + 4w = [date].\n              This IS an improvement vs current commit [date].\n              Recommend partial pull-in.\"</code>",
+  "edges": [
+   {
+    "l": "BLOCK options",
+    "cls": "esc",
+    "t": "compose_response (rejection)"
+   },
+   {
+    "l": "PASS/FLAG options",
+    "cls": "yes",
+    "t": "Resolution Agent"
+   }
+  ]
+ },
+ "hitl3": {
+  "agent": "hitl",
+  "name": "HITL-3 Confirm Loop",
+  "cat": "HUMAN OVERSIGHT · HITL-3 ★",
+  "desc": "Third HITL point — after compose_response streams the proposal. Human planner has three choices: (1) CONFIRM → execute_action + audit_log. (2) REJECT + reason → re-enter Resolution Agent with that option excluded from candidates. (3) ASK ALTERNATIVES → pull next from ranked_options without re-running triage. Maximum 3 loops (HITL_MAX_LOOPS=3), then auto-escalate to Sourcing.",
+  "logic": [
+   {
+    "k": "CONFIRM",
+    "v": "→ execute_action → audit_log → END"
+   },
+   {
+    "k": "REJECT",
+    "v": "→ note reason in state → re-enter Resolution (option excluded)"
+   },
+   {
+    "k": "ALTERNATIVES",
+    "v": "→ pull next from ranked_options (no triage re-run)"
+   },
+   {
+    "k": "Max loops",
+    "v": "HITL_MAX_LOOPS = 3, then escalate to Sourcing with context"
+   },
+   {
+    "k": "What-if",
+    "v": "Planner follow-up → LLM outputs ~50-token constraint JSON (allowed_modes, date_tolerance_days, exclude_plants, max_split_count); Tool 3 re-runs, 0 SAP calls (Memo §6.4)"
+   }
+  ],
+  "inputs": "Streamed proposal from compose_response",
+  "bapi": [],
+  "tools": [
+   "HITL_interrupt (Chainlit / WebSocket)"
+  ],
+  "outputs": "human_decision: {action: CONFIRM|REJECT|ALTERNATIVES, reason?: str}",
+  "policies": [
+   "EDG-03 — Human Confirmation Loop (max iterations = 3)"
+  ],
+  "edges": [
+   {
+    "l": "CONFIRM",
+    "cls": "yes",
+    "t": "execute_action → audit_log → END"
+   },
+   {
+    "l": "REJECT+reason",
+    "cls": "esc",
+    "t": "Resolution Agent (option excluded)"
+   },
+   {
+    "l": "ASK ALTERNATIVES",
+    "cls": "no",
+    "t": "next in ranked_options"
+   }
+  ],
+  "algo": "<div class=\"algo-group\">v3 · Design Memo v0.8</div>\n<div class=\"code-sec\">HITL-3 loop (from node spec) <span class=\"src-tag\">v3 node spec</span></div><code class=\"p-code\">decision = interrupt(proposal)          # Chainlit / WebSocket\nloops = 0\nwhile loops &lt; HITL_MAX_LOOPS:            # = 3  (EDG-03)\n    if decision.action == &#x27;CONFIRM&#x27;:\n        → execute_action → write_audit_log → END\n    elif decision.action == &#x27;REJECT&#x27;:\n        state.excluded_options.append(option); state.reject_reason = decision.reason\n        → re-enter Resolution Agent (option excluded)\n    elif decision.action == &#x27;ALTERNATIVES&#x27;:\n        option = next(ranked_options)    # no triage re-run\n    loops += 1\n→ escalate to Sourcing with context</code>\n<div class=\"code-sec\">What-if follow-up — LLM extracts constraints, Tool 3 re-runs <span class=\"src-tag\">Design Memo v0.8 §6.4</span></div><code class=\"p-code\">Planner: &#x27;If I accept land only and can wait 3 extra days, what are the options?&#x27;\n   |\n   ▼\nLLM (parse_constraints node) — small JSON output only:\n   {\n       &#x27;allowed_modes&#x27;:       [&#x27;LAND&#x27;],\n       &#x27;date_tolerance_days&#x27;: 3\n   }\n   ≈ 200 input tokens + 50 output tokens\n   |\n   ▼\nUpdate state constraints:\n   state[&#x27;allowed_modes&#x27;]       = [&#x27;LAND&#x27;]\n   state[&#x27;date_tolerance_days&#x27;] = 3\n   |\n   ▼\nRe-run find_fastest_atp_route() — pure Python, no SAP call\n   filter: transport_mode IN allowed_modes\n   filter: arrival_date &lt;= required_date + 3 days\n   sort + greedy fill — unchanged algorithm\n   |\n   ▼\nLLM (compose_response) — format result for planner\n   flag if air freight approval form needed\n   |\n   ▼\nPlanner sees new options — can ask another what-if or confirm\n\nCost per what-if turn : ~250 tokens LLM (constraint extraction) + ~300 tokens LLM (response format)\n                        0 SAP RFC calls · &lt;1ms Python computation · ~1 second total\nStays in state        : stock_nodes and sto_nodes (already fetched, reused)\n                        route_result (overwritten each turn)\n                        allowed_modes, date_tolerance_days (updated each turn)\n                        conversation history (LangGraph checkpointer)</code>\n"
+ }
+};
+
+/* ─── SIDE PANEL RENDERER ─── */
+function showNode(id) {
+  const n = N[id]; if (!n) return;
+  document.getElementById('side-empty').style.display = 'none';
+
+  const agC = AGENT_COLORS[n.agent] || {};
+  const agBadge = n.agent ? `<span class="p-agent-badge" style="background:${agC.bg};border:1px solid ${agC.b};color:${agC.txt}">${agC.label}</span><br>` : '';
+
+  let logicHtml = '';
+  if (n.logic && n.logic.length) {
+    logicHtml = '<div class="p-sec">Key Logic</div><div class="p-logic">';
+    n.logic.forEach(l => { logicHtml += `<div class="logic-row"><span class="logic-k">${l.k}</span><span class="logic-v">${l.v}</span></div>`; });
+    logicHtml += '</div>';
+  }
+
+  let policyHtml = '';
+  if (n.policies && n.policies.length) {
+    policyHtml = '<div class="p-sec">Policy Rules</div><div style="margin-bottom:5px">';
+    n.policies.forEach(p => { policyHtml += `<span class="p-policy-tag">${p}</span>`; });
+    policyHtml += '</div>';
+  }
+
+  let rows = '';
+  if (n.inputs) rows += `<tr><td class="kl">Input</td><td class="kv">${n.inputs}</td></tr>`;
+  if (n.tools.length || n.bapi.length) {
+    const s = [...n.tools.map(t => `<span class="kv">${t}</span>`), ...n.bapi.map(b => `<span class="ksub">(${b})</span>`)].join('<br>');
+    rows += `<tr><td class="kl">SAP / Tools</td><td style="line-height:1.7">${s}</td></tr>`;
+  }
+  if (n.outputs) rows += `<tr><td class="kl">Output</td><td class="kv">${n.outputs}</td></tr>`;
+  const kvTable = rows ? `<div class="p-sec">I/O & Integration</div><table class="p-kv">${rows}</table>` : '';
+
+  let edgesHtml = '';
+  if (n.edges && n.edges.length) {
+    edgesHtml = '<div class="p-sec">Outgoing Edges</div>';
+    n.edges.forEach(e => { edgesHtml += `<div class="edge-row"><span class="e-pill ${e.cls||''}">${e.l}</span><span class="e-tgt">→ ${e.t}</span></div>`; });
+  }
+
+  const body = document.getElementById('side-body');
+  body.innerHTML = `${agBadge}<span class="p-name">${n.name}</span><div class="p-cat">${n.cat}</div><div class="p-sec">Description</div><div class="p-card p-desc">${n.desc}</div>${logicHtml}${policyHtml}${kvTable}${edgesHtml}`;
+
+  const algoPane = document.getElementById('side-algo');
+  const tabs = document.getElementById('side-tabs');
+  if (n.algo) {
+    algoPane.innerHTML = `<span class="p-name">${n.name}</span><div class="p-cat">Algorithm & Data Model</div><p class="algo-note">Pseudocode — reference design; actual implementation may vary.</p>${n.algo}`;
+    tabs.classList.add('vis');
+  } else {
+    algoPane.innerHTML = '';
+    tabs.classList.remove('vis');
+  }
+
+  switchTab('overview');
+  document.querySelectorAll('.node').forEach(el => el.classList.remove('sel'));
+  document.querySelectorAll('.node[onclick*="showNode(\'' + id + '\')"]').forEach(el => el.classList.add('sel'));
+}
+
+function switchTab(tab) {
+  document.getElementById('side-body').style.display = tab === 'overview' ? 'block' : 'none';
+  document.getElementById('side-algo').style.display = tab === 'algo' ? 'block' : 'none';
+  document.getElementById('tab-overview').classList.toggle('active', tab === 'overview');
+  document.getElementById('tab-algo').classList.toggle('active', tab === 'algo');
+}
+
+function setView(v) {
+  document.body.classList.toggle('view-step', v === 'step');
+  document.body.classList.toggle('view-all', v === 'all');
+  document.getElementById('btn-step').classList.toggle('active', v === 'step');
+  document.getElementById('btn-all').classList.toggle('active', v === 'all');
+}
+
+function dimToggle(el, cls) {
+  document.body.classList.toggle(cls, !el.checked);
+}
+
+/* init */
+document.body.classList.add('view-step');
+</script>
+</body>
+</html>

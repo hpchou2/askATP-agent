@@ -6,9 +6,13 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+.pytest_cache/
 
 # Generated database (recreate with: python setup_db.py)
 *.db
 
 # Stray empty file
 /python
+
+# Archify diagram build output (source lives in docs/diagrams/, image in docs/images/)
+.archify/
