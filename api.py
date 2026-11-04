@@ -2,19 +2,26 @@
 api.py — FastAPI entrypoint for the ATP Fulfillment Multi-Agent System.
 
 Endpoints:
-    GET  /health       — liveness check
-    POST /atp-check    — run the full LangGraph supervisor workflow
+    GET  /health                 — liveness check
+    POST /atp-check              — run the full LangGraph supervisor workflow
+    POST /approve/{thread_id}    — approve or reject a proposed PO switch and
+                                   resume the paused workflow
 """
 
 import logging
 import os
+import sqlite3
 import time
+import uuid
 from contextlib import asynccontextmanager
 from datetime import date
+from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from langchain_core.messages import HumanMessage
+from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.types import Command
 from pydantic import BaseModel, Field
 
 load_dotenv()
@@ -29,6 +36,10 @@ logger = logging.getLogger(__name__)
 # ─── Graph singleton ──────────────────────────────────────────────────────────
 # Compiled once at startup; reused across all requests.
 
+# Workflow checkpoints, so runs paused for planner approval survive a server
+# restart. setup_db.py deletes this file when it resets the mock SAP data.
+CHECKPOINT_DB_PATH = os.path.join(os.path.dirname(__file__), "checkpoints.db")
+
 _graph = None
 
 
@@ -42,10 +53,14 @@ async def lifespan(app: FastAPI):
         )
     from agents.supervisor import build_graph
     logger.info("Building LangGraph multi-agent graph…")
-    _graph = build_graph()
+    # Sync endpoints run in a thread pool, so the connection is shared across
+    # threads; SqliteSaver serialises access with its own lock.
+    conn = sqlite3.connect(CHECKPOINT_DB_PATH, check_same_thread=False)
+    _graph = build_graph(checkpointer=SqliteSaver(conn))
     logger.info("Graph ready — ATP Fulfillment Agent is online")
     yield
     _graph = None
+    conn.close()
 
 
 app = FastAPI(
@@ -86,8 +101,27 @@ class MessageTrace(BaseModel):
 
 
 class ATPCheckResponse(BaseModel):
-    answer: str = Field(description="Final supervisor summary returned to the user")
+    status: Literal["COMPLETED", "PENDING_APPROVAL"] = Field(
+        description="COMPLETED, or PENDING_APPROVAL when a PO switch awaits a planner decision"
+    )
+    thread_id: str = Field(description="Workflow run ID; pass it to POST /approve/{thread_id}")
+    answer: str = Field(description="Final supervisor summary, or the approval question if pending")
+    proposal: dict | None = Field(
+        None, description="The proposed PO switch awaiting approval (only when PENDING_APPROVAL)"
+    )
     trace: list[MessageTrace] = Field(description="Full agent message trace for observability")
+
+
+class ApproveRequest(BaseModel):
+    approved: bool = Field(..., description="true to execute the proposed PO switch, false to reject it")
+    approver: str = Field(..., min_length=1, description="Name or ID of the planner deciding")
+    comment: str | None = Field(None, description="Optional note, stored in the approval log")
+
+    model_config = {
+        "json_schema_extra": {
+            "example": {"approved": True, "approver": "angela.chou", "comment": "Customer is strategic"}
+        }
+    }
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -175,20 +209,88 @@ def atp_check(req: ATPCheckRequest):
         f"- Requested date     : {req.requested_date}"
     )
 
+    return _run_graph(
+        {"messages": [HumanMessage(content=user_message)]},
+        thread_id=str(uuid.uuid4()),
+        label="POST /atp-check",
+        t0=t0,
+    )
+
+
+@app.post(
+    "/approve/{thread_id}",
+    response_model=ATPCheckResponse,
+    summary="Approve or reject a proposed PO switch",
+    description=(
+        "Resumes a workflow run that POST /atp-check returned as PENDING_APPROVAL. "
+        "If approved, the proposed POs are switched; if rejected, nothing changes. "
+        "Either way the decision is written to the approval_log table and the "
+        "supervisor returns the final answer."
+    ),
+)
+def approve(thread_id: str, req: ApproveRequest):
+    if _graph is None:
+        raise HTTPException(status_code=503, detail="Agent graph is not initialised.")
+
+    snapshot = _graph.get_state({"configurable": {"thread_id": thread_id}})
+    if not snapshot.values:
+        raise HTTPException(status_code=404, detail=f"No workflow run with thread_id '{thread_id}'.")
+    if not snapshot.interrupts:
+        raise HTTPException(status_code=409, detail="This workflow run is not waiting for approval.")
+
+    proposal = snapshot.interrupts[0].value
+    logger.info(
+        "[POST /approve] thread=%s  approved=%s  approver=%s",
+        thread_id, req.approved, req.approver,
+    )
+    return _run_graph(
+        Command(resume={
+            "approved": req.approved,
+            "approver": req.approver,
+            "comment":  req.comment,
+            # The POs the planner actually saw, so the tool can detect a stale proposal
+            "approved_pos": [p["po_number"] for p in proposal["proposed_pos"]],
+        }),
+        thread_id=thread_id,
+        label="POST /approve",
+        t0=time.perf_counter(),
+    )
+
+
+def _run_graph(graph_input, thread_id: str, label: str, t0: float) -> ATPCheckResponse:
+    """
+    Runs (or resumes) the graph for one workflow run, then reports either the
+    final answer or the proposal the run is paused on.
+    """
+    config = {"configurable": {"thread_id": thread_id}}
     try:
-        result = _graph.invoke(
-            {"messages": [HumanMessage(content=user_message)]}
-        )
+        _graph.invoke(graph_input, config)
     except Exception as exc:
-        logger.error("[POST /atp-check] failed — %s", exc)
+        logger.error("[%s] failed — %s", label, exc)
         raise HTTPException(status_code=500, detail=str(exc))
 
-    answer = _extract_final_answer(result["messages"])
+    snapshot = _graph.get_state(config)
+    messages = snapshot.values.get("messages", [])
     elapsed = time.perf_counter() - t0
-    logger.info("[POST /atp-check] completed in %.2fs — answer: %.120s%s",
-                elapsed, answer, "…" if len(answer) > 120 else "")
 
+    if snapshot.interrupts:
+        proposal = snapshot.interrupts[0].value
+        logger.info("[%s] paused for approval after %.2fs — thread=%s — %s",
+                    label, elapsed, thread_id, proposal["message"])
+        return ATPCheckResponse(
+            status="PENDING_APPROVAL",
+            thread_id=thread_id,
+            answer=proposal["message"],
+            proposal=proposal,
+            trace=_build_trace(messages),
+        )
+
+    answer = _extract_final_answer(messages)
+    logger.info("[%s] completed in %.2fs — answer: %.120s%s",
+                label, elapsed, answer, "…" if len(answer) > 120 else "")
     return ATPCheckResponse(
+        status="COMPLETED",
+        thread_id=thread_id,
         answer=answer,
-        trace=_build_trace(result["messages"]),
+        trace=_build_trace(messages),
     )

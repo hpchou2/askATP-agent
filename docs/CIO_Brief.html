@@ -268,7 +268,7 @@
   <h1>Autonomous ATP Fulfillment<br><span>Powered by Multi-Agent AI</span></h1>
   <p class="subtitle">
     An AI agent system that checks inventory availability, evaluates delivery feasibility,
-    and automatically escalates to air freight when authorized — all in a single API call.
+    and proposes air freight when policy allows it — executed only after a planner approves.
   </p>
   <div class="tags">
     <span class="tag">Supply Chain</span>
@@ -323,12 +323,13 @@
     <div class="card highlighted">
       <h3>✅ After: AI Agent Workflow</h3>
       <ul>
-        <li><strong>Single API call</strong> triggers the entire workflow (seconds)</li>
+        <li><strong>One API call</strong> runs the whole check (about a minute); a second call approves any PO change</li>
         <li><strong>Deterministic ATP logic</strong> mirrors SAP's calculation engine</li>
         <li><strong>Policy enforcement</strong> is automated and plant-specific</li>
         <li><strong>Minimum POs switched</strong> — cost impact minimized algorithmically</li>
+        <li><strong>Planner sign-off</strong> — one approval call before any PO changes; every decision logged</li>
         <li><strong>Full trace</strong> of every agent decision and tool call returned</li>
-        <li><strong>Consistent</strong> — temperature=0 means same logic every time</li>
+        <li><strong>Consistent</strong> — temperature=0 keeps routing repeatable; the numbers never depend on the LLM</li>
       </ul>
     </div>
   </div>
@@ -369,7 +370,7 @@
     <div class="flow-arrow">→</div>
     <div class="flow-node">
       <div class="flow-box amber">SAP Agent<div class="sub">ReAct</div></div>
-      <div class="flow-label">Extract · ATP · Switch</div>
+      <div class="flow-label">Extract · ATP · Propose switch</div>
     </div>
     <div class="flow-arrow">⇄</div>
     <div class="flow-node">
@@ -378,8 +379,8 @@
     </div>
     <div class="flow-arrow">→</div>
     <div class="flow-node">
-      <div class="flow-box green">Response<div class="sub">answer + trace</div></div>
-      <div class="flow-label">Decision + Audit Trail</div>
+      <div class="flow-box green">Planner Approval<div class="sub">pause · /approve</div></div>
+      <div class="flow-label">Sign-off + Audit Trail</div>
     </div>
   </div>
 
@@ -409,7 +410,7 @@
       <div class="tools">
         <div class="tool-pill">sap_extract()</div>
         <div class="tool-pill">calculate_atp()</div>
-        <div class="tool-pill">po_logistic_method_change()</div>
+        <div class="tool-pill">po_logistic_method_change() ⏸ approval</div>
       </div>
     </div>
     <div class="agent-card" style="border-color:rgba(139,92,246,0.3)">
@@ -459,7 +460,7 @@
         <td><span class="badge badge-green">✓</span></td>
         <td><span class="badge badge-amber">✗</span></td>
         <td><span class="badge badge-green">Permitted</span></td>
-        <td><span class="badge badge-blue">POs Switched to AIR</span></td>
+        <td><span class="badge badge-blue">AIR Proposed → Planner Approves</span></td>
       </tr>
       <tr>
         <td>PO late — air blocked</td>
@@ -590,8 +591,8 @@
     <div class="assumption-item">
       <div class="icon">↩️</div>
       <div>
-        <h4>No Rollback / Change Approval</h4>
-        <p>PO method changes write directly to DB. Production requires SAP change order workflow with approval steps and rollback capability.</p>
+        <h4>No Rollback; Approver Not Authenticated</h4>
+        <p>PO changes wait for a planner's approval and every decision is logged, but the approver's name isn't verified and approved changes can't be rolled back. Production needs login-based approval rights and an SAP change-order rollback path.</p>
       </div>
     </div>
     <div class="assumption-item">
@@ -650,9 +651,10 @@
     <div class="card">
       <h3>Why temperature=0?</h3>
       <p style="font-size:0.82rem;color:#94a3b8;margin-top:0.5rem;">
-        Supply chain routing decisions must be <strong>reproducible</strong>. The same ATP scenario
-        must always produce the same routing outcome. Temperature=0 eliminates randomness — this is
-        a deliberate product decision, not a default.
+        Supply chain routing decisions should be <strong>reproducible</strong>. Temperature=0 minimizes
+        randomness in the LLM's routing. It isn't a hard guarantee, so quantities, dates, PO selection
+        and the approval gate are computed in Python and never depend on the LLM — a deliberate
+        product decision, not a default.
       </p>
     </div>
   </div>
@@ -677,6 +679,7 @@
         <ul>
           <li>SQLite mock database with 4 materials, 5 POs</li>
           <li>5 test scenarios covering all decision paths</li>
+          <li>Planner approval before any PO change, with an append-only approval log</li>
           <li>Full message trace and audit trail</li>
         </ul>
       </div>
@@ -702,7 +705,7 @@
         <p>Enterprise-grade reliability, compliance, and observability.</p>
         <ul>
           <li>Multi-plant allocation logic</li>
-          <li>Human-in-the-loop approval gate for high-value PO switches</li>
+          <li>Approval matrix: approvers checked against role and order value</li>
           <li>LLM cost/token monitoring and budget guardrails</li>
           <li>Full audit logging to data warehouse</li>
           <li>Rollback workflow via SAP change orders</li>

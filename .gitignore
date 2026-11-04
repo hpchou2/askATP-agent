@@ -8,8 +8,11 @@ __pycache__/
 venv/
 .pytest_cache/
 
-# Generated database (recreate with: python setup_db.py)
+# Generated databases (recreate with: python setup_db.py) and SQLite side files
 *.db
+*.db-wal
+*.db-shm
+*.db-journal
 
 # Stray empty file
 /python

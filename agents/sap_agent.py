@@ -3,19 +3,26 @@ agents/sap_agent.py — SAP Agent node for the LangGraph multi-agent system.
 
 Wraps three SAP tools with the @tool decorator so LangChain can pass their
 schemas to the LLM, then builds the ReAct agent via create_react_agent.
+
+The PO change tool contains the planner approval gate (LangGraph interrupt),
+so a PO can't be changed without a planner's decision, whatever the LLM does.
 """
 
 import logging
 
 from langchain_core.tools import tool
+from langgraph.config import get_config
 from langgraph.prebuilt import create_react_agent
+from langgraph.types import interrupt
 
 logger = logging.getLogger(__name__)
 
 from tools.sap_tools import (
     sap_extract as _sap_extract,
     calculate_atp as _calculate_atp,
+    plan_po_logistic_change as _plan_po_logistic_change,
     po_logistic_method_change as _po_logistic_method_change,
+    log_approval as _log_approval,
 )
 
 
@@ -90,8 +97,9 @@ def po_logistic_method_change(
     method: str,
 ) -> dict:
     """
-    Switch the minimum set of POs (from the break-even PO to the decisive PO)
-    to the specified logistic method (AIR or SEA).
+    Propose switching the minimum set of POs (from the break-even PO to the
+    decisive PO) to the specified logistic method (AIR or SEA), wait for a
+    planner to approve, then execute.
 
     Internally calls sap_extract to get current stock, committed sales orders,
     and open POs, then applies the break-even-to-decisive selection rule:
@@ -109,6 +117,11 @@ def po_logistic_method_change(
     All-or-nothing: if the POs cannot reach requested_qty, no PO is switched
     (updated_count = 0) and the shortage must be reported instead.
 
+    Planner approval happens automatically inside this tool: the workflow
+    pauses until a planner approves or rejects the proposal. The result's
+    approval_status is APPROVED, REJECTED or STALE_PROPOSAL (the SAP data
+    changed after the proposal was shown, so nothing was executed).
+
     Call this ONLY after the Supervisor has confirmed that air shipping is
     permitted for the plant.
 
@@ -118,7 +131,78 @@ def po_logistic_method_change(
         requested_qty: The customer's quantity that must be covered
         method:        Target shipping method — 'AIR' or 'SEA'
     """
-    return _po_logistic_method_change(matnr, werks, requested_qty, method)
+    plan = _plan_po_logistic_change(matnr, werks, requested_qty, method)
+    if not plan["covered"]:
+        # Nothing would be switched, so there is nothing to approve. (This
+        # also covers a resumed run whose data changed so much that the POs
+        # can no longer cover the order: the shortage is reported, no PO
+        # changes, and interrupt() is never reached, so no approval row is
+        # written.)
+        return _po_logistic_method_change(matnr, werks, requested_qty, method)
+
+    proposed = [p["po_number"] for p in plan["switch_pos"]]
+
+    # Pause the workflow here. The proposal is returned to the API caller
+    # (POST /atp-check → PENDING_APPROVAL), and execution resumes when
+    # POST /approve/{thread_id} supplies the planner's decision. On resume
+    # this function runs again from the top, so `plan` is recomputed from
+    # current SAP data before interrupt() returns the decision.
+    decision = interrupt({
+        "type":          "po_logistic_method_change",
+        "matnr":         matnr,
+        "werks":         werks,
+        "requested_qty": requested_qty,
+        "method":        plan["method"],
+        "proposed_pos":  plan["switch_pos"],
+        "remaining_pos": plan["remaining_pos"],
+        "coverage_qty":  plan["coverage_qty"],
+        "message": (
+            f"Approve switching {', '.join(proposed)} to {plan['method']} "
+            f"to cover {requested_qty:.0f} units of {matnr} at {werks}?"
+        ),
+    })
+
+    approver = decision.get("approver")
+    comment = decision.get("comment")
+    thread_id = get_config().get("configurable", {}).get("thread_id")
+
+    def _not_executed(status: str, message: str) -> dict:
+        _log_approval(thread_id, matnr, werks, requested_qty, plan["method"],
+                      proposed, status, approver, comment)
+        return {
+            "approval_status": status,
+            "approver":        approver,
+            "comment":         comment,
+            "updated_count":   0,
+            "updated_pos":     [],
+            "message":         message,
+        }
+
+    if not decision.get("approved"):
+        return _not_executed(
+            "REJECTED",
+            f"Planner {approver} rejected switching {', '.join(proposed)} to "
+            f"{plan['method']}. No POs were changed.",
+        )
+
+    # Guard against approving a stale proposal: if stock, orders or POs changed
+    # while the run was paused, the plan the planner saw is no longer valid.
+    approved = decision.get("approved_pos")
+    if approved is not None and approved != proposed:
+        return _not_executed(
+            "STALE_PROPOSAL",
+            f"SAP data changed after the proposal was shown (approved "
+            f"{', '.join(approved)}; current plan is {', '.join(proposed)}). "
+            f"No POs were changed — run the ATP check again.",
+        )
+
+    # Switch the POs and log the approval in one transaction.
+    result = _po_logistic_method_change(
+        matnr, werks, requested_qty, method,
+        approval={"thread_id": thread_id, "approver": approver, "comment": comment},
+    )
+    return {"approval_status": "APPROVED", "approver": approver,
+            "comment": comment, **result}
 
 
 # ─── System prompt ────────────────────────────────────────────────────────────
@@ -153,9 +237,13 @@ break-even-to-decisive rule: it skips POs whose units are entirely consumed by \
 committed sales orders, then switches from the break-even PO (first where cumulative \
 supply covers all SO commitments) through to the decisive PO (first where cumulative \
 supply also covers requested_qty).
+   - The tool pauses the workflow for planner approval by itself. Do not ask \
+for approval yourself and do not call it again after it returns.
    - After calling it, report back to the Supervisor:
+     * approval_status — APPROVED, REJECTED or STALE_PROPOSAL, plus the \
+approver and any comment
      * updated_pos   — which POs were switched, their delivery dates, and the \
-running coverage quantity at each step
+running coverage quantity at each step (empty unless APPROVED)
      * remaining_pos — which POs were NOT switched; distinguish between POs \
 skipped because they were entirely absorbed by committed SO demand (running still \
 negative) and POs left untouched because coverage was already reached

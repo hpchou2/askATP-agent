@@ -1,13 +1,19 @@
 """
 tests/test_sap_tools.py — the five README scenarios, checked against the
-deterministic SAP tools (calculate_atp and po_logistic_method_change).
+deterministic SAP tools (calculate_atp, plan_po_logistic_change,
+po_logistic_method_change), plus the approval log.
 """
 
 import sqlite3
 
 import pytest
 
-from tools.sap_tools import calculate_atp, po_logistic_method_change
+from tools.sap_tools import (
+    calculate_atp,
+    log_approval,
+    plan_po_logistic_change,
+    po_logistic_method_change,
+)
 from tests.conftest import day
 
 
@@ -89,3 +95,44 @@ def test4_shortage_switches_nothing(db):
 def test_invalid_method_is_rejected(db):
     with pytest.raises(ValueError):
         po_logistic_method_change("MAT001", "TW01", 100, "TRUCK")
+
+
+# ─── plan_po_logistic_change ──────────────────────────────────────────────────
+
+def test5_plan_proposes_without_writing(db):
+    r = plan_po_logistic_change("MAT004", "TW01", 50, "AIR")
+    assert r["covered"]
+    assert [p["po_number"] for p in r["switch_pos"]] == ["PO1005"]
+    assert r["remaining_pos"] == ["PO1004", "PO1006"]
+    assert _method(db, "PO1005") == "SEA"   # nothing written
+
+
+def test4_plan_for_shortage_proposes_nothing(db):
+    r = plan_po_logistic_change("MAT003", "TW01", 200, "AIR")
+    assert not r["covered"]
+    assert r["switch_pos"] == []
+    assert r["remaining_pos"] == ["PO1003"]
+
+
+# ─── log_approval ─────────────────────────────────────────────────────────────
+
+def test_log_approval_appends_a_row(db):
+    log_approval("t1", "MAT004", "TW01", 50, "AIR", ["PO1005"], "APPROVED", "angela", "ok")
+    log_approval("t2", "MAT001", "TW01", 100, "AIR", ["PO1001"], "REJECTED", "bob", None)
+    conn = sqlite3.connect(db)
+    rows = conn.execute(
+        "SELECT thread_id, po_numbers, decision, approver FROM approval_log ORDER BY log_id"
+    ).fetchall()
+    conn.close()
+    assert rows == [("t1", "PO1005", "APPROVED", "angela"), ("t2", "PO1001", "REJECTED", "bob")]
+
+
+def test_approved_switch_and_log_are_one_transaction(db):
+    # If the approval can't be logged, the PO must not be switched either.
+    conn = sqlite3.connect(db)
+    conn.execute("DROP TABLE approval_log")
+    conn.close()
+    with pytest.raises(sqlite3.OperationalError):
+        po_logistic_method_change("MAT004", "TW01", 50, "AIR",
+                                  approval={"thread_id": "t1", "approver": "angela"})
+    assert _method(db, "PO1005") == "SEA"
