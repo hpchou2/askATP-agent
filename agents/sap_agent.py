@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 from tools.sap_tools import (
     sap_extract as _sap_extract,
     calculate_atp as _calculate_atp,
-    plan_po_logistic_change as _plan_po_logistic_change,
-    po_logistic_method_change as _po_logistic_method_change,
-    log_approval as _log_approval,
+    plan_po_logistic_change,
+    execute_po_logistic_change,
+    log_approval,
 )
 
 
@@ -131,14 +131,14 @@ def po_logistic_method_change(
         requested_qty: The customer's quantity that must be covered
         method:        Target shipping method — 'AIR' or 'SEA'
     """
-    plan = _plan_po_logistic_change(matnr, werks, requested_qty, method)
+    plan = plan_po_logistic_change(matnr, werks, requested_qty, method)
     if not plan["covered"]:
         # Nothing would be switched, so there is nothing to approve. (This
         # also covers a resumed run whose data changed so much that the POs
         # can no longer cover the order: the shortage is reported, no PO
         # changes, and interrupt() is never reached, so no approval row is
         # written.)
-        return _po_logistic_method_change(matnr, werks, requested_qty, method)
+        return execute_po_logistic_change(matnr, werks, requested_qty, method)
 
     proposed = [p["po_number"] for p in plan["switch_pos"]]
 
@@ -167,7 +167,7 @@ def po_logistic_method_change(
     thread_id = get_config().get("configurable", {}).get("thread_id")
 
     def _not_executed(status: str, message: str) -> dict:
-        _log_approval(thread_id, matnr, werks, requested_qty, plan["method"],
+        log_approval(thread_id, matnr, werks, requested_qty, plan["method"],
                       proposed, status, approver, comment)
         return {
             "approval_status": status,
@@ -197,7 +197,7 @@ def po_logistic_method_change(
         )
 
     # Switch the POs and log the approval in one transaction.
-    result = _po_logistic_method_change(
+    result = execute_po_logistic_change(
         matnr, werks, requested_qty, method,
         approval={"thread_id": thread_id, "approver": approver, "comment": comment},
     )

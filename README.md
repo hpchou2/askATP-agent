@@ -12,9 +12,6 @@ Whether it comes from sales, a customer's online order, or an ERP alert, answeri
 
 <img src="docs/images/architecture.png" alt="askATP architecture: FastAPI hands each request to the LangGraph agents (Supervisor, SAP Agent, Policy Agent). The SAP Agent uses read-only ATP tools and a PO change tool that waits for planner approval; the Policy Agent reads the plant air rules. Paused runs are saved in checkpoints.db; POs and the approval log live in the SQLite mock of SAP." width="900">
 
-**How the approval pause works.** On the air path, the planner makes two API calls. The first runs the agents until the PO change tool calls `interrupt()`; the run is saved and the call returns `PENDING_APPROVAL`. Nothing runs while the planner decides. The second call loads the saved run and continues it inside the tool:
-
-<img src="docs/images/approval-flow.png" alt="Sequence diagram of the approval flow. Call 1: the planner posts /atp-check, FastAPI runs the graph, the agents ask the PO change tool to switch POs to AIR, the tool calls interrupt() and saves the run to checkpoints.db, the run stops early and FastAPI returns PENDING_APPROVAL with the proposal. The run then stays paused. Call 2: the planner posts /approve/{thread_id}, FastAPI loads the paused run and resumes it with the decision, the PO change tool updates the POs and the approval log only if approved and the plan is unchanged, and FastAPI returns COMPLETED with the answer." width="760">
 
 ### Why it's more than an LLM demo
 
@@ -107,7 +104,7 @@ Air freight is only considered when the quantity exists but arrives too late. Wh
 
 ### 3. Which POs get switched to air
 
-Air freight is expensive, so the PO selection (`plan_po_logistic_change()`, applied by `po_logistic_method_change()` after approval) switches as few POs as possible. It goes through POs in arrival order and keeps a running total:
+Air freight is expensive, so the PO selection (`plan_po_logistic_change()`, applied by `execute_po_logistic_change()` after approval) switches as few POs as possible. It goes through POs in arrival order and keeps a running total:
 
 ```
 running = stock − committed_SOs + PO₁ + PO₂ + … + POᵢ
@@ -135,7 +132,7 @@ Every concept above has a direct SAP counterpart. The mock database and function
 | Units promised to customers | VBAP / VBBE · open sales orders | `sales_orders` table |
 | Incoming supply | EKPO / EKET · ME23N | `purchase_orders` table |
 | The ATP check | CO09 · `BAPI_MATERIAL_AVAILABILITY` | `calculate_atp()` |
-| Changing a PO's freight mode | ME22N (shipping instructions / schedule lines) | `po_logistic_method_change()` |
+| Changing a PO's freight mode | ME22N (shipping instructions / schedule lines) | `execute_po_logistic_change()` |
 | Approving the change, and the record of it | Release strategy (ME28/ME29N) · change documents (CDHDR / CDPOS) | `interrupt()` + `POST /approve` · `approval_log` table |
 | Freight policy | Corporate logistics guideline | `policies/air_shipping_policy.md` |
 
@@ -480,7 +477,7 @@ askATP_simple/
 │   └── policy_agent.py           — ReAct agent wrapping the policy file reader
 │
 ├── tools/
-│   ├── sap_tools.py              — sap_extract, calculate_atp, plan/po_logistic_method_change, log_approval
+│   ├── sap_tools.py              — sap_extract, calculate_atp, plan/execute_po_logistic_change, log_approval
 │   └── policy_tools.py           — read_air_shipping_policy
 │
 ├── tests/

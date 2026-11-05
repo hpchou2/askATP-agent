@@ -1,14 +1,17 @@
 """
 tools/sap_tools.py — SAP-facing tools for the SAP Agent.
 
-Three tools the SAP Agent can call:
-  1. sap_extract()              — pull all relevant SAP data in one shot
-  2. calculate_atp()            — determine fulfillability from current SAP data
-  3. po_logistic_method_change() — switch PO shipping method (SEA → AIR or vice versa)
+Plain functions wrapped as LLM tools in agents/sap_agent.py:
+  1. sap_extract()                — pull all relevant SAP data in one shot
+  2. calculate_atp()              — determine fulfillability from current SAP data
 
-Plus two helpers used by the planner approval step (agents/sap_agent.py):
-  - plan_po_logistic_change()   — which POs would be switched, without writing
-  - log_approval()              — append the planner's decision to approval_log
+PO shipping-method change, split into plan and execute so a planner can
+approve in between (the po_logistic_method_change tool in agents/sap_agent.py
+calls both around the approval step):
+  - plan_po_logistic_change()     — which POs would be switched, without writing
+  - execute_po_logistic_change()  — write the switch to the database; does NOT
+                                    ask for approval itself
+  - log_approval()                — append the planner's decision to approval_log
 """
 
 import logging
@@ -172,8 +175,8 @@ def calculate_atp(
         max_available_date  (str)       — date when max_available is first reached
         pos_checked         (list)      — informational: every PO walked, with
                                           {po_number, menge, eindt, logistic_method,
-                                           cumulative_after}. PO switching is handled
-                                          automatically by po_logistic_method_change
+                                           cumulative_after}. PO selection is handled
+                                          automatically by plan_po_logistic_change
                                           and does not need to be derived from this list.
     """
     today = date.today().isoformat()
@@ -385,10 +388,10 @@ def plan_po_logistic_change(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# po_logistic_method_change
+# execute_po_logistic_change
 # ─────────────────────────────────────────────────────────────────────────────
 
-def po_logistic_method_change(
+def execute_po_logistic_change(
     matnr: str,
     werks: str,
     requested_qty: float,
@@ -405,8 +408,9 @@ def po_logistic_method_change(
     All-or-nothing: if the POs cannot reach requested_qty, no PO is switched
     and the database is left unchanged.
 
-    In the agent workflow this only runs after a planner approves the proposal
-    (see agents/sap_agent.py).
+    This function does not ask for approval: it writes as soon as it is called.
+    In the agent workflow it only runs after a planner approves the proposal
+    (see the po_logistic_method_change tool in agents/sap_agent.py).
 
     Parameters
     ----------
@@ -434,7 +438,7 @@ def po_logistic_method_change(
         message         (str)   — human-readable summary
     """
     logger.info(
-        "[po_logistic_method_change] %s / %s — switching POs to %s to cover qty=%.0f",
+        "[execute_po_logistic_change] %s / %s — switching POs to %s to cover qty=%.0f",
         matnr, werks, method, requested_qty,
     )
 
@@ -472,7 +476,7 @@ def po_logistic_method_change(
         )
 
     logger.info(
-        "[po_logistic_method_change] switched %d PO(s) to %s — coverage=%.0f / requested=%.0f",
+        "[execute_po_logistic_change] switched %d PO(s) to %s — coverage=%.0f / requested=%.0f",
         len(updated_pos), method, running, requested_qty,
     )
     for p in updated_pos:
@@ -515,7 +519,7 @@ def log_approval(
 
     decision is 'APPROVED', 'REJECTED' or 'STALE_PROPOSAL' (approved, but the
     SAP data changed after the proposal was shown, so nothing was executed).
-    An executed approval is logged by po_logistic_method_change(approval=...)
+    An executed approval is logged by execute_po_logistic_change(approval=...)
     instead, in the same transaction as the PO updates.
     """
     conn = _get_conn()

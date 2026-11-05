@@ -1,7 +1,7 @@
 """
 tests/test_sap_tools.py — the five README scenarios, checked against the
 deterministic SAP tools (calculate_atp, plan_po_logistic_change,
-po_logistic_method_change), plus the approval log.
+execute_po_logistic_change), plus the approval log.
 """
 
 import sqlite3
@@ -10,9 +10,9 @@ import pytest
 
 from tools.sap_tools import (
     calculate_atp,
+    execute_po_logistic_change,
     log_approval,
     plan_po_logistic_change,
-    po_logistic_method_change,
 )
 from tests.conftest import day
 
@@ -66,17 +66,17 @@ def test5_negative_free_stock_still_fulfillable_late(db):
     assert r["days_late"] == 35
 
 
-# ─── po_logistic_method_change ────────────────────────────────────────────────
+# ─── execute_po_logistic_change ───────────────────────────────────────────────
 
 def test3_switches_the_single_decisive_po(db):
-    r = po_logistic_method_change("MAT001", "TW01", 100, "AIR")
+    r = execute_po_logistic_change("MAT001", "TW01", 100, "AIR")
     assert [p["po_number"] for p in r["updated_pos"]] == ["PO1001"]
     assert r["coverage_qty"] == 130
     assert _method(db, "PO1001") == "AIR"
 
 
 def test5_skips_po_absorbed_by_existing_orders(db):
-    r = po_logistic_method_change("MAT004", "TW01", 50, "AIR")
+    r = execute_po_logistic_change("MAT004", "TW01", 50, "AIR")
     assert [p["po_number"] for p in r["updated_pos"]] == ["PO1005"]
     assert r["remaining_pos"] == ["PO1004", "PO1006"]
     assert _method(db, "PO1004") == "SEA"
@@ -85,7 +85,7 @@ def test5_skips_po_absorbed_by_existing_orders(db):
 
 
 def test4_shortage_switches_nothing(db):
-    r = po_logistic_method_change("MAT003", "TW01", 200, "AIR")
+    r = execute_po_logistic_change("MAT003", "TW01", 200, "AIR")
     assert r["updated_count"] == 0
     assert r["updated_pos"] == []
     assert r["remaining_pos"] == ["PO1003"]
@@ -94,7 +94,7 @@ def test4_shortage_switches_nothing(db):
 
 def test_invalid_method_is_rejected(db):
     with pytest.raises(ValueError):
-        po_logistic_method_change("MAT001", "TW01", 100, "TRUCK")
+        execute_po_logistic_change("MAT001", "TW01", 100, "TRUCK")
 
 
 # ─── plan_po_logistic_change ──────────────────────────────────────────────────
@@ -133,6 +133,6 @@ def test_approved_switch_and_log_are_one_transaction(db):
     conn.execute("DROP TABLE approval_log")
     conn.close()
     with pytest.raises(sqlite3.OperationalError):
-        po_logistic_method_change("MAT004", "TW01", 50, "AIR",
-                                  approval={"thread_id": "t1", "approver": "angela"})
+        execute_po_logistic_change("MAT004", "TW01", 50, "AIR",
+                                   approval={"thread_id": "t1", "approver": "angela"})
     assert _method(db, "PO1005") == "SEA"
