@@ -1,6 +1,6 @@
 # askATP — Agentic Order-Fulfillment Copilot for Supply Chain Planners
 
-A **FastAPI + LangGraph** multi-agent system that mirrors SAP-style **Available-to-Promise (ATP)** checks. When sea freight cannot meet the customer's requested delivery date, it proposes an **air shipping** upgrade and waits for a planner to approve it.
+A **FastAPI + LangGraph** multi-agent system that mirrors SAP-style **Available-to-Promise (ATP)** checks and automatically escalates to **air shipping** when sea freight cannot meet the customer's requested delivery date.
 
 `Python` · `FastAPI` · `LangGraph` · `LangChain` · `Claude (Anthropic)` · `Pydantic v2` · `SQLite`
 
@@ -8,10 +8,9 @@ A **FastAPI + LangGraph** multi-agent system that mirrors SAP-style **Available-
 
 Whether it comes from sales, a customer's online order, or an ERP alert, answering this question is a core part of a fulfillment planner's job, for every part they own. It means netting stock against orders and incoming supply, checking shipping options and policy, and often involving other teams.
 
-**askATP automates the repeatable core of that workflow behind one API call, plus a planner approval call whenever a PO would change.** A LangGraph multi-agent system has three agents. A **Supervisor** routes the work the way a planning team would. A **SAP Agent** runs deterministic ATP math and proposes PO changes. A **Policy Agent** reads plant-level logistics rules and decides whether escalation is allowed. Before any PO is changed, the workflow **pauses for a planner to approve** and resumes when the approval call arrives. Each response contains the decision and a full audit trace of how it was reached.
+**askATP automates the repeatable core of that workflow behind one API call.** A LangGraph multi-agent system has three agents. A **Supervisor** routes the work the way a planning team would. A **SAP Agent** runs deterministic ATP math and executes PO actions. A **Policy Agent** reads plant-level logistics rules and decides whether escalation is allowed. Each response contains the decision and a full audit trace of how it was reached.
 
-<img src="docs/images/architecture.png" alt="askATP architecture: FastAPI hands each request to the LangGraph agents (Supervisor, SAP Agent, Policy Agent). The SAP Agent uses read-only ATP tools and a PO change tool that waits for planner approval; the Policy Agent reads the plant air rules. Paused runs are saved in checkpoints.db; POs and the approval log live in the SQLite mock of SAP." width="900">
-
+<img src="docs/images/architecture.png" alt="askATP architecture: FastAPI hands each request to a LangGraph Supervisor, which routes to a SAP Agent and a Policy Agent. Their tools run deterministic Python against a SQLite mock of SAP and a Markdown policy file." width="900">
 
 ### Why it's more than an LLM demo
 
@@ -20,27 +19,24 @@ Whether it comes from sales, a customer's online order, or an ERP alert, answeri
 | **Built on real planning logic** | [The ATP check](#1-the-atp-check-when-can-we-deliver) works the way planners do: stock minus units already promised to customers, then incoming POs added in order of arrival. [PO selection](#3-which-pos-get-switched-to-air) skips POs whose units are already owed to existing orders, so air freight is only paid for where it actually helps the new order. |
 | **Deterministic where it must be, AI where it helps** | Quantities and dates are computed in plain Python, never by the LLM. The LLM is used only for routing, interpreting policy text and writing the summary. `temperature=0` keeps routing as repeatable as possible; it isn't a hard guarantee, which is why nothing that must be exact depends on the LLM. |
 | **Policy as a document** | Air-freight authorization lives in [a Markdown file](policies/air_shipping_policy.md) covering per-plant rules, quantity thresholds and cost-reduction freezes. Logistics can change the rules without a code deploy. |
-| **A human signs off, enforced in code** | The approval gate sits inside the PO-change tool (LangGraph `interrupt`), not in a prompt, so no routing decision by the LLM can change a PO without a planner's approval. If SAP data changes while a proposal waits so that different POs would be switched, the approval is refused as stale. |
-| **Auditable by design** | Every tool call and every reasoning step is returned in `trace`. Every approval, rejection or stale refusal is appended to an `approval_log` table. Compliance can reconstruct why a PO was switched, which policy clause allowed it and who approved it. |
+| **Auditable by design** | Every tool call and every reasoning step is returned in `trace`. Compliance can reconstruct why a PO was switched and which policy clause allowed it. |
 | **Built to scale** | Tools are plain functions with dict inputs and outputs, so they can later be exposed as MCP servers (Model Context Protocol). The SQLite mock maps one-to-one to SAP objects (see [How this maps to SAP](#4-how-this-maps-to-sap)), so a real RFC/BAPI connector can replace it without changing agent logic. |
 
 ### Technical highlights
 
 | Layer | Implementation |
 |---|---|
-| **API** | FastAPI + Uvicorn. `POST /atp-check` takes `matnr, werks, requested_qty, requested_date` ([SAP field names](#sap-field-name-glossary)) and returns `{status, thread_id, answer, proposal, trace}`. `POST /approve/{thread_id}` takes the planner's decision and resumes the run. Requests and responses are validated with Pydantic. The agent graph is compiled once at startup (FastAPI `lifespan`). |
+| **API** | FastAPI + Uvicorn. `POST /atp-check` takes `matnr, werks, requested_qty, requested_date` ([SAP field names](#sap-field-name-glossary)) and returns `{answer, trace}`. Requests and responses are validated with Pydantic. The agent graph is compiled once at startup (FastAPI `lifespan`). |
 | **Orchestration** | LangGraph `StateGraph` using a supervisor pattern. The Supervisor returns a typed `SupervisorDecision` (structured output: `sap_agent \| policy_agent \| FINISH`), so routing is a schema-validated choice, not free text. Shared state is a message list merged with `add_messages`. |
-| **Human-in-the-loop** | `interrupt()` inside the PO-change tool pauses the whole graph, including the sub-agent it runs in. A `SqliteSaver` checkpointer stores the paused run in `checkpoints.db`, so it survives a server restart. `/approve` resumes it with `Command(resume=...)`. |
 | **Agents** | Two ReAct sub-agents (`create_react_agent`), each limited to its own tools. **SAP Agent:** `sap_extract`, `calculate_atp`, `po_logistic_method_change`. **Policy Agent:** `read_air_shipping_policy`. Each sub-agent returns control to the Supervisor after every turn. |
 | **LLM** | Claude via `langchain-anthropic` at `temperature=0`. The model is set through `ANTHROPIC_MODEL` in `.env`. |
-| **Tools / business logic** | Plain Python functions with typed inputs and dict outputs, wrapped with `@tool`, so the docstrings become the tool descriptions the LLM reads. |
-| **Tests** | `pytest`, no API key needed. The tools are tested directly. The approval flow and the API run through the real supervisor graph, with a scripted chat model standing in for Claude. |
-| **Data** | SQLite mock of SAP tables (`stock`, `sales_orders`, `purchase_orders`, `material_master`) using SAP field names (`matnr`, `werks`, `labst`, `menge`, `eindt`), plus an append-only `approval_log`. `setup_db.py` reseeds it to a known state for repeatable tests. |
+| **Tools / business logic** | Plain Python functions with typed inputs and dict outputs, wrapped with `@tool`, so the docstrings become the tool descriptions the LLM reads. Covered by `pytest` tests that need no API key. |
+| **Data** | SQLite mock of SAP tables (`stock`, `sales_orders`, `purchase_orders`, `material_master`) using SAP field names (`matnr`, `werks`, `labst`, `menge`, `eindt`). `setup_db.py` reseeds it to a known state for repeatable tests. |
 | **Observability** | Every response includes the full message trace: supervisor decisions, tool calls with arguments, and tool results. Each routing step and tool call is also logged to the console, along with total request time. |
 
-**Scope of this repo:** it implements the core escalation path: the ATP check, then the SEA→AIR mode upgrade, gated by policy and by planner approval. It is the first slice of the full planner workflow described in [Where this is going](#where-this-is-going--the-full-planner-workflow).
+**Scope of this repo:** it implements the core escalation path. That is the ATP check, then the SEA→AIR mode upgrade, gated by policy. It is the first slice of the full planner workflow described in [Where this is going](#where-this-is-going--the-full-planner-workflow).
 
-**Why multi-agent for this slice?** On its own, this slice is a fixed decision table and could be a plain function. It's built as a supervisor with sub-agents because the full workflow isn't a fixed table. Requests arrive as free text, some steps are open-ended (finding a shortage's root cause), and each lever has its own data and rules: credit hold, cross-plant transfer, work-order expedite, rework. With a supervisor, adding a lever means adding one agent and one routing rule, not rewriting the control flow. Each agent can only use its own tools, so the Policy Agent can never touch a PO. Anything that must be correct is enforced in code, not in prompts: the ATP math, PO selection and the approval gate. So the LLM's routing can change which path a request takes, but never the numbers, and never without a planner's sign-off.
+**Why multi-agent for this slice?** On its own, this slice is a fixed decision table and could be a plain function. It's built as a supervisor with sub-agents because the full workflow isn't a fixed table. Requests arrive as free text, some steps are open-ended (finding a shortage's root cause), and each lever has its own data and rules: credit hold, cross-plant transfer, work-order expedite, rework. With a supervisor, adding a lever means adding one agent and one routing rule, not rewriting the control flow. Each agent can only use its own tools, so the Policy Agent can never touch a PO. Anything that must be correct is enforced in code, not in prompts: the ATP math and PO selection. So the LLM's routing can change which path a request takes, but never the numbers.
 
 Not a developer? The [CIO brief](https://hpchou2.github.io/askATP-agent/CIO_Brief.html) explains the business case on one page (see [Related documents](#related-documents)).
 
@@ -90,21 +86,14 @@ Supervisor ──► SAP Agent: sap_extract + calculate_atp
             Supervisor ──► SAP Agent: po_logistic_method_change → AIR
               │
               ▼
-            ⏸ PAUSE: proposal returned to the caller (status = PENDING_APPROVAL)
-              │   run saved by the checkpointer; resumes on POST /approve/{thread_id}
-              │
-              ├── APPROVED ──► POs switched ──► FINISH  "switched PO(s) to AIR, approved by …"
-              ├── REJECTED ──► nothing changed ► FINISH  "stays on SEA, earliest date …"
-              └── data changed while waiting ──► FINISH  "proposal is stale, run the check again"
+            FINISH  "switched PO(s) to AIR — see updated delivery dates"
 ```
-
-Every decision (approved, rejected or stale) is appended to the `approval_log` table.
 
 Air freight is only considered when the quantity exists but arrives too late. When the quantity doesn't exist at all, flying it in faster can't help, so the agent reports the shortage instead.
 
 ### 3. Which POs get switched to air
 
-Air freight is expensive, so the PO selection (`plan_po_logistic_change()`, applied by `execute_po_logistic_change()` after approval) switches as few POs as possible. It goes through POs in arrival order and keeps a running total:
+Air freight is expensive, so `po_logistic_method_change()` switches as few POs as possible. It goes through POs in arrival order and keeps a running total:
 
 ```
 running = stock − committed_SOs + PO₁ + PO₂ + … + POᵢ
@@ -132,8 +121,7 @@ Every concept above has a direct SAP counterpart. The mock database and function
 | Units promised to customers | VBAP / VBBE · open sales orders | `sales_orders` table |
 | Incoming supply | EKPO / EKET · ME23N | `purchase_orders` table |
 | The ATP check | CO09 · `BAPI_MATERIAL_AVAILABILITY` | `calculate_atp()` |
-| Changing a PO's freight mode | ME22N (shipping instructions / schedule lines) | `execute_po_logistic_change()` |
-| Approving the change, and the record of it | Release strategy (ME28/ME29N) · change documents (CDHDR / CDPOS) | `interrupt()` + `POST /approve` · `approval_log` table |
+| Changing a PO's freight mode | ME22N (shipping instructions / schedule lines) | `po_logistic_method_change()` |
 | Freight policy | Corporate logistics guideline | `policies/air_shipping_policy.md` |
 
 ---
@@ -157,7 +145,7 @@ pip install -r requirements.txt
 cp .env.example .env               # Windows: copy .env.example .env
 # Edit .env:  ANTHROPIC_API_KEY=sk-ant-...
 
-# 3. Create and seed the mock SAP database (re-run any time to reset; stop the server first)
+# 3. Create and seed the mock SAP database (re-run any time to reset)
 python setup_db.py
 
 # 4. Start the API server
@@ -175,16 +163,6 @@ curl -X POST http://127.0.0.1:8000/atp-check \
   -H "Content-Type: application/json" \
   -d '{"matnr": "MAT001", "werks": "TW01", "requested_qty": 20, "requested_date": "<date printed by setup_db.py>"}'
 ```
-
-If the response has `"status": "PENDING_APPROVAL"`, approve (or reject) it with the `thread_id` from that response:
-
-```bash
-curl -X POST http://127.0.0.1:8000/approve/<thread_id> \
-  -H "Content-Type: application/json" \
-  -d '{"approved": true, "approver": "your.name", "comment": "optional"}'
-```
-
-`python setup_db.py` also clears any runs still waiting for approval, since they refer to the old data. Stop the server before running it.
 
 ---
 
@@ -224,58 +202,15 @@ Run the full multi-agent ATP fulfillment workflow.
 
 ```json
 {
-  "status":    "PENDING_APPROVAL",
-  "thread_id": "e6270f0a-46ce-4171-b7d8-350b50496fc1",
-  "answer":    "Approve switching PO1001 to AIR to cover 100 units of MAT001 at TW01?",
-  "proposal": {
-    "type": "po_logistic_method_change",
-    "matnr": "MAT001", "werks": "TW01", "requested_qty": 100, "method": "AIR",
-    "proposed_pos":  [{ "po_number": "PO1001", "eindt": "2026-12-15", "menge": 100,
-                        "old_method": "SEA", "new_method": "AIR", "cumulative_after": 130 }],
-    "remaining_pos": [],
-    "coverage_qty":  130,
-    "message": "Approve switching PO1001 to AIR ..."
-  },
+  "answer": "Order for MAT001 at TW01 cannot be fulfilled by 2026-06-10 via sea ...",
   "trace": [
-    { "role": "human", "name": null,         "content": "Please check ATP ..." },
-    { "role": "human", "name": "supervisor", "content": "Run calculate_atp for MAT001 ..." },
-    { "role": "ai",    "name": null,         "content": "[tool_use] calculate_atp({...})" },
-    { "role": "tool",  "name": "calculate_atp", "content": "{'fulfillable': True, 'on_time': False, ...}" }
+    { "role": "human", "name": null,        "content": "Please check ATP ..." },
+    { "role": "ai",    "name": "supervisor", "content": "Route to sap_agent ..." },
+    { "role": "ai",    "name": "sap_agent",  "content": "calculate_atp result ..." },
+    { "role": "human", "name": "supervisor", "content": "Check policy for TW01 ..." }
   ]
 }
 ```
-
-| Field | Description |
-|---|---|
-| `status` | `COMPLETED` (the answer is final) or `PENDING_APPROVAL` (a PO switch is waiting for a planner) |
-| `thread_id` | ID of this workflow run. Pass it to `POST /approve/{thread_id}` |
-| `answer` | The supervisor's final summary, or the approval question when pending |
-| `proposal` | The proposed PO switch. Only present when `PENDING_APPROVAL` |
-| `trace` | Every message so far: supervisor instructions, tool calls and tool results |
-
-### `POST /approve/{thread_id}`
-
-Approve or reject the proposal a run is paused on, then resume the run to the end.
-
-**Request body:**
-
-```json
-{ "approved": true, "approver": "angela.chou", "comment": "Strategic customer" }
-```
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `approved` | bool | ✓ | `true` switches the proposed POs; `false` changes nothing |
-| `approver` | string | ✓ | Who is deciding. Stored in `approval_log` |
-| `comment` | string | | Optional note. Stored in `approval_log` |
-
-**Response:** the same shape as `/atp-check`, with `status: "COMPLETED"` and the final answer. If stock, orders or POs changed while the run was waiting, the approval is refused as stale and nothing is changed.
-
-| Error | When |
-|---|---|
-| `404` | No run with that `thread_id` |
-| `409` | The run isn't waiting for approval (already decided, or never needed it) |
-| `422` | Missing `approved` or `approver` |
 
 ---
 
@@ -298,17 +233,13 @@ Existing customer orders are all due today + 30 days. Re-run `python setup_db.py
 
 Five scenarios cover every branch of the [agent workflow](#2-the-agent-workflow-what-happens-with-the-result).
 
-**Automated tests.** `pytest` runs against a temporary copy of the seed data. No API key is needed:
-
-- `tests/test_sap_tools.py`: the ATP math, PO selection and PO switching for all five scenarios, plus the approval log
-- `tests/test_approval.py`: the approval step through the real supervisor graph, with a scripted chat model in place of Claude. It pauses before any PO changes; approve switches only PO1005; reject changes nothing; a stale proposal is refused
-- `tests/test_api.py`: `/atp-check` and `/approve` end to end, including the 404, 409 and 422 errors
+**Automated tests.** The ATP math and PO switching for all five scenarios are checked with `pytest` against a temporary copy of the seed data. No API key is needed:
 
 ```bash
 python -m pytest
 ```
 
-**End-to-end runs.** To run a scenario through the full agent system, send its request to `POST /atp-check` (see [Try it](#try-it)). Dates are written as `today+n`, meaning n days after you ran `setup_db.py`, which prints each request with the real dates filled in. The screenshots below come from earlier runs, so the dates in them differ from yours. Tests 1, 2 and 4 were captured before the approval step existed, so their responses don't yet show the `status` and `thread_id` fields.
+**End-to-end runs.** To run a scenario through the full agent system, send its request to `POST /atp-check` (see [Try it](#try-it)). Dates are written as `today+n`, meaning n days after you ran `setup_db.py`, which prints each request with the real dates filled in. The screenshots below come from an earlier run, so the dates in them differ from yours.
 
 ### Test 1 — Fulfillable from current stock (on time)
 
@@ -346,10 +277,9 @@ python -m pytest
 
 - `available_now = 30` (not enough). PO1001 (+100) brings the total to 130, but it arrives today + 40 days → `on_time = False` (30 days late)
 - TW01 policy: AIR **PERMITTED** with no minimum quantity
-- PO selection: `available_now = 30 > 0`, so no PO is owed to existing orders and none needs to be skipped. PO1001 alone covers the request (30 + 100 = 130 ≥ 100) and is proposed for AIR.
-- **Agent flow:** supervisor → sap_agent (sap_extract + calculate_atp) → supervisor → policy_agent → supervisor → sap_agent (po_logistic_method_change) → ⏸ planner approval → supervisor FINISH
-- **Step 1, `POST /atp-check`:** `status = PENDING_APPROVAL`, proposal = PO1001. PO1001 is still SEA in the database
-- **Step 2, `POST /approve/{thread_id}`** with `{"approved": true, "approver": "..."}`: PO1001 switched to AIR, one `APPROVED` row in `approval_log`. Sending `"approved": false` instead leaves PO1001 on SEA, and the answer gives the earliest sea date
+- PO selection: `available_now = 30 > 0`, so no PO is owed to existing orders and none needs to be skipped. PO1001 alone covers the request (30 + 100 = 130 ≥ 100) and is switched to AIR.
+- **Agent flow:** supervisor → sap_agent (sap_extract + calculate_atp) → supervisor → policy_agent → supervisor → sap_agent (po_logistic_method_change) → supervisor FINISH
+- **Expected answer:**  PO1001 switched to AIR
 
 <img src="docs/images/test3-PO_late_switchedToAIR_25sec.png" alt="Postman test result — Fulfill with AIR escalation" width="700">
 
@@ -378,10 +308,9 @@ python -m pytest
   - PO1005 (+120) brings the total to +70, which covers 50 units.→ **switch**.  
   - PO1006 → coverage already reached → **leave untouched**
 - `on_time = False` (35 days late). TW01 policy: AIR **PERMITTED**
-- `po_logistic_method_change` proposes PO1005 only: PO1004 stays on SEA (serves committed SOs) and PO1006 is untouched
-- **Agent flow:** supervisor → sap_agent (sap_extract + calculate_atp) → supervisor → policy_agent → supervisor → sap_agent (po_logistic_method_change) → ⏸ planner approval → supervisor FINISH
-- **Step 1, `POST /atp-check`:** `status = PENDING_APPROVAL`, `proposed_pos` = PO1005, `remaining_pos` = PO1004, PO1006
-- **Step 2, `POST /approve/{thread_id}`:** only PO1005 switched to AIR; PO1004 and PO1006 left on SEA
+- `po_logistic_method_change`: PO1004 left on SEA (serves committed SOs); PO1005 switched to AIR; PO1006 untouched
+- **Agent flow:** supervisor → sap_agent (sap_extract + calculate_atp) → supervisor → policy_agent → supervisor → sap_agent (po_logistic_method_change) → supervisor FINISH
+- **Expected answer:** Only PO1005 switched to AIR; PO1004 and PO1006 left on SEA
 
 <img src="docs/images/test5_changeAIR_withCommittedSO.png" alt="Postman test result — Fulfill with AIR escalation, skipping existing PO allocated to current SO" width="700">
 
@@ -391,13 +320,13 @@ python -m pytest
 
 This is a working prototype of one slice of the workflow. Things it deliberately doesn't do yet:
 
+- **No human approval before a PO is changed.** When policy allows air, the SAP Agent updates the PO immediately. A human approval step is the next planned change (see [Where this is going](#where-this-is-going--the-full-planner-workflow)).
 - **Whole POs are switched, not exact quantities.** If a 120-unit PO is switched to cover 50 units, all 120 go by air.
 - **Delivery dates aren't recalculated after a switch.** A PO switched to AIR keeps its sea arrival date until a real air booking provides a new one.
 - **Mock data only.** One plant, four materials, SQLite. There's no live SAP connection.
-- **No authentication** on the API. Anyone who can reach `/approve` can approve, and `approver` is whatever name the caller sends. In production the approver would come from the login and be checked against an approval matrix.
+- **No authentication** on the API.
 - **Air freight isn't checked against the requested date.** Air lead times aren't modeled, so the system can't yet confirm that switching to air actually arrives in time.
-- **One approval edge case isn't logged.** If stock, orders or POs change so much while a proposal waits that the POs can no longer cover the order, the resumed run reports a shortage and changes nothing, but the planner's decision isn't written to `approval_log`.
-- **Latency.** The supervisor and sub-agents make LLM calls one after another. In the latest run, the air escalation path took about 50 seconds to reach the approval step and about 25 more after approval.
+- **Latency.** The full escalation path makes several LLM calls in sequence and took about 25 seconds in testing.
 
 ---
 
@@ -410,6 +339,13 @@ An interactive version of this design is in [docs/atp_langgraph_v4.html](https:/
 ### Waterfall view: how a planner actually triages
 
 The waterfall view is the realistic **default** for day-to-day fulfillment work. A planner doesn't ask the factory to expedite a work order if moving stock between plants already solves the problem. Every later step costs more money or more goodwill with another team.
+
+<img src="docs/images/workflow-waterfall.png" alt="Waterfall view of the target workflow: an intake agent (credit hold, request parsing), an inventory agent (destination ATP, open sea order, shipping, air form), a policy agent that evaluates every option, a resolution agent (cross-plant inventory, work-order expedite, rework, shortage root cause) and a compose agent with planner confirmation and an audit log. Green outlines mark the steps this prototype already runs." width="900">
+
+Green outlines mark what this prototype already runs; orange marks partial coverage.
+
+<details>
+<summary>Text version of the waterfall</summary>
 
 ```
 ① INTAKE        check_credit_hold (VKM1)    → credit-blocked orders go to Finance; triage pauses
@@ -427,9 +363,55 @@ The waterfall view is the realistic **default** for day-to-day fulfillment work.
                 → planner confirms / rejects / asks for alternatives → execute → append-only audit log
 ```
 
+</details>
+
 ### Parallel view: rank every option at once
 
 For **OVER_COMMIT** events and **batch backlog reprioritization**, the planner wants all feasible options compared side by side, not just the first one that works. The parallel view runs steps 02–06 concurrently (`asyncio.gather`). It collects one row per option and ranks them by cost, confidence (adjusted for production yield) and arrival date. The destination ATP check still runs first so that a simple case exits early.
+
+<img src="docs/images/workflow-parallel.png" alt="Parallel view of the target workflow: after the credit check and the destination ATP early-exit check, steps 02 to 06 (air schedule, inventory, work-order expedite, rework, shortage root cause) run at the same time; their options are collected, ranked by cost, confidence and arrival date, and composed into a recommendation." width="900">
+
+Which mode fits which situation in real operations is still an open question for senior planners, so the design keeps both.
+
+### Demo scenarios
+
+[docs/demo.html](https://hpchou2.github.io/askATP-agent/demo.html) plays six scenarios showing how the full design would look to a planner. **They are scripted with mock data, not live agent output.** Only scenario 1 (air freight) overlaps with what this repo runs today.
+
+| Scenario | Path | In this repo |
+|---|---|---|
+| 1 · Air freight, tonight's cutoff | Switch sea to air, cost approval | Partial |
+| 2 · Transfer + quality-hold stock | Cross-plant transfer, explain blocked stock | Design only |
+| 3 · Compare all options | Parallel mode, ranked options | Design only |
+| 4 · System alert: ATP slip | Triggered by SAP, no request needed | Design only |
+| 5 · Work order + overtime | Yield-adjusted output, manager approval | Design only |
+| 6 · Component shortage | Routed to the team that owns the cause | Design only |
+
+<img src="docs/images/demo-1-air-freight.png" alt="Demo scenario 1: a planner asks to pull in PO-88321 from Jun 20 to Jun 10. The agent checks the shipping schedule and air cutoff, finds that air freight tonight is the only path that meets Jun 10 at $3,800 and 74% confidence, and asks for manager approval because the cost is above the $3,000 threshold." width="800">
+
+<details>
+<summary>Scenarios 2–6</summary>
+
+**2 · Transfer + quality-hold stock**
+
+<img src="docs/images/demo-2-transfer-quality-hold.png" alt="Demo scenario 2: for the same 100-unit pull-in, the agent proposes a stock transfer from duty-paid plant WH02 (Jun 11, $1,200, 82% confidence) and flags that WH03 shows 1,262 units physically but zero ATP because all of it is in quality inspection, with a pointer to the QM manager." width="800">
+
+**3 · Compare all options**
+
+<img src="docs/images/demo-3-compare-options.png" alt="Demo scenario 3: all paths are queried at once and three ranked options are shown: a stock transfer from the duty-paid plant WH02, a split of PO-7731 from WH04, and a substitute part that needs product-manager confirmation." width="800">
+
+**4 · System alert: ATP slip**
+
+<img src="docs/images/demo-4-atp-slip-alert.png" alt="Demo scenario 4: a system alert that PO-45221 slipped to Jun 25 against a Jun 18 commit starts the agent with no planner request. It traces the root cause to work order WO-3812 delayed at AOI and offers option A (60 units via WH02 transfer plus air by Jun 17) or option B (accept Jun 22)." width="800">
+
+**5 · Work order + overtime**
+
+<img src="docs/images/demo-5-wo-overtime.png" alt="Demo scenario 5: no plant has stock, so the only source is work order WO-3820. Expediting it with overtime reaches Jun 22 at $4,100 and 68% confidence, which needs manufacturing-manager approval." width="800">
+
+**6 · Component shortage**
+
+<img src="docs/images/demo-6-component-shortage.png" alt="Demo scenario 6: every option is exhausted. The agent finds two short components (CPU-A421 short 80 units with a low-confidence supplier commit, MEM-B220 short 30), says the order cannot be committed for Jun 25 (earliest realistic Jul 1), and escalates to Sourcing with a shortage packet." width="800">
+
+</details>
 
 ### Domain rules built into the design
 
@@ -444,7 +426,7 @@ For **OVER_COMMIT** events and **batch backlog reprioritization**, the planner w
 | ATP netting + PO walk + break-even PO selection | ✅ Implemented |
 | Policy-gated SEA→AIR upgrade | ✅ Implemented |
 | Exact-quantity schedule-line split for AIR | 🛠 Next |
-| Human approval gate (LangGraph `interrupt` + SQLite checkpointer) and approval log | ✅ Implemented |
+| Human approval gate (LangGraph `interrupt`) | 🛠 Next |
 | Credit hold, QM block, cross-plant STO, WO expedite, rework, shortage root cause | 📐 Designed |
 | Parallel ranking mode, batch reprioritization, append-only audit DB | 📐 Designed |
 
@@ -452,12 +434,13 @@ For **OVER_COMMIT** events and **batch backlog reprioritization**, the planner w
 
 ## Related documents
 
-This README is the technical entry point. Two shorter documents cover the business side:
+This README is the technical entry point. These documents cover the business side and the target design:
 
 | Document | What it is | Who it's for |
 |---|---|---|
 | [docs/CIO_Brief.html](https://hpchou2.github.io/askATP-agent/CIO_Brief.html) | One-page business case: the problem, architecture, where the AI is used, assumptions and constraints, and the path from prototype to production. | CIO, IT and supply-chain leadership, hiring managers |
 | [docs/CIO_Talking_Points.md](docs/CIO_Talking_Points.md) | A 2–3 minute spoken walkthrough of the same story: opening, problem, architecture and decision matrix. | Whoever presents the project in a meeting or interview |
+| [docs/demo.html](https://hpchou2.github.io/askATP-agent/demo.html) | Scripted playback of six planner scenarios from the target design (mock data, not live agent output). | Anyone who wants to see how the full design would feel to a planner |
 
 ---
 
@@ -465,7 +448,7 @@ This README is the technical entry point. Two shorter documents cover the busine
 
 ```
 askATP_simple/
-├── api.py                        — FastAPI app, lifespan, /health, /atp-check and /approve endpoints
+├── api.py                        — FastAPI app, lifespan, /health and /atp-check endpoints
 ├── setup_db.py                   — creates and seeds sap_mock.db (dates relative to today)
 ├── requirements.txt
 ├── LICENSE
@@ -473,18 +456,15 @@ askATP_simple/
 │
 ├── agents/
 │   ├── supervisor.py             — LangGraph StateGraph + supervisor routing logic
-│   ├── sap_agent.py              — ReAct agent wrapping the three SAP tools; holds the approval gate
+│   ├── sap_agent.py              — ReAct agent wrapping the three SAP tools
 │   └── policy_agent.py           — ReAct agent wrapping the policy file reader
 │
 ├── tools/
-│   ├── sap_tools.py              — sap_extract, calculate_atp, plan/execute_po_logistic_change, log_approval
+│   ├── sap_tools.py              — sap_extract, calculate_atp, po_logistic_method_change
 │   └── policy_tools.py           — read_air_shipping_policy
 │
 ├── tests/
-│   ├── conftest.py               — temp database fixture and scripted chat model
-│   ├── test_sap_tools.py         — the five scenarios against the tools (no API key needed)
-│   ├── test_approval.py          — approve / reject / stale through the real graph
-│   └── test_api.py               — /atp-check and /approve end to end
+│   └── test_sap_tools.py         — pytest checks for the five scenarios (no API key needed)
 │
 ├── policies/
 │   └── air_shipping_policy.md    — per-plant AIR shipping authorization rules
@@ -493,11 +473,11 @@ askATP_simple/
 │   ├── CIO_Brief.html            — business case, assumptions, roadmap
 │   ├── CIO_Talking_Points.md     — 2–3 min spoken walkthrough for presenting
 │   ├── atp_langgraph_v4.html     — interactive target architecture (full planner workflow)
-│   ├── diagrams/                 — architecture and approval-flow diagram sources (Archify JSON)
-│   └── images/                   — architecture and approval-flow diagrams, test screenshots
+│   ├── demo.html                 — scripted demo of six planner scenarios (mock data)
+│   ├── diagrams/                 — architecture diagram source (Archify JSON)
+│   └── images/                   — architecture, workflow and demo images, test screenshots
 │
-├── sap_mock.db                   — generated by setup_db.py (do not edit by hand)
-└── checkpoints.db                — paused workflow runs (created by the API; cleared by setup_db.py)
+└── sap_mock.db                   — generated by setup_db.py (do not edit by hand)
 ```
 
 ---

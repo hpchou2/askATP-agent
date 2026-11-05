@@ -8,10 +8,6 @@ Graph topology:
 
 The supervisor inspects the full message history after each subagent turn and
 decides the next routing step via structured output (SupervisorDecision).
-
-When the SAP Agent proposes a PO switch, the graph pauses inside that tool
-(LangGraph interrupt) until a planner approves or rejects it. The checkpointer
-passed to build_graph() stores the paused run so it can be resumed later.
 """
 
 import logging
@@ -95,19 +91,15 @@ STEP 3 — Evaluate policy verdict
     → Route to sap_agent
     → Message: Instruct it to call po_logistic_method_change(matnr, werks,
                requested_qty, "AIR") to switch the minimum necessary POs to AIR.
-               The tool pauses for planner approval by itself; do not add a
-               separate approval step.
 
   If NOT PERMITTED:
     → Route to FINISH
     → Message: Explain the shortage cannot be resolved — air shipping is not
                authorized for this plant — and provide the policy reason.
 
-STEP 4 — After logistics change (check approval_status in the SAP Agent's report)
-  If APPROVED:
-    → Route to FINISH
-    → Message: Summarize the outcome for the user:
-             - Who approved the change, and any comment
+STEP 4 — After logistics change
+  → Route to FINISH
+  → Message: Summarize the outcome for the user:
              - Which POs were switched to AIR and their expected goods receipt
                dates (eindt — the vendor delivery date; note these still reflect
                the original SEA schedule until the actual AIR shipment is booked)
@@ -115,19 +107,6 @@ STEP 4 — After logistics change (check approval_status in the SAP Agent's repo
                committed SO demand (available_now was negative), explain this so
                the user understands why those POs were not switched
              - Coverage quantity achieved vs. requested quantity
-             - The decision is already recorded in the approval log; don't
-               ask the user to log it
-
-  If REJECTED:
-    → Route to FINISH
-    → Message: State that the planner rejected the air switch (include who and
-               any comment), no POs were changed, and the order can only be met
-               by the earliest SEA date (earliest_date, days_late days late).
-
-  If STALE_PROPOSAL:
-    → Route to FINISH
-    → Message: State that SAP data changed while the proposal was waiting for
-               approval, no POs were changed, and the ATP check must be run again.
 
 ════════════════════════════════════════════════════════════
 IMPORTANT
@@ -141,18 +120,13 @@ IMPORTANT
 
 # ─── Graph builder ────────────────────────────────────────────────────────────
 
-def build_graph(checkpointer=None, llm=None):
+def build_graph():
     """
     Compiles and returns the full LangGraph multi-agent graph.
 
-    checkpointer: saves the graph state after every step. Required for the
-                  planner approval step — without it, a run that pauses for
-                  approval can't be resumed.
-    llm:          chat model shared by all agents. Defaults to Claude, which
-                  requires ANTHROPIC_API_KEY in the environment (or a .env
-                  file); tests pass a scripted model instead.
+    Requires ANTHROPIC_API_KEY set in the environment (or a .env file).
     """
-    llm = llm or ChatAnthropic(
+    llm = ChatAnthropic(
         model=os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-6"),
         api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=0,
@@ -230,4 +204,4 @@ def build_graph(checkpointer=None, llm=None):
     graph.add_edge("sap_agent",    "supervisor")
     graph.add_edge("policy_agent", "supervisor")
 
-    return graph.compile(checkpointer=checkpointer)
+    return graph.compile()

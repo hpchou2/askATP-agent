@@ -1,17 +1,10 @@
 """
 tools/sap_tools.py — SAP-facing tools for the SAP Agent.
 
-Plain functions wrapped as LLM tools in agents/sap_agent.py:
-  1. sap_extract()                — pull all relevant SAP data in one shot
-  2. calculate_atp()              — determine fulfillability from current SAP data
-
-PO shipping-method change, split into plan and execute so a planner can
-approve in between (the po_logistic_method_change tool in agents/sap_agent.py
-calls both around the approval step):
-  - plan_po_logistic_change()     — which POs would be switched, without writing
-  - execute_po_logistic_change()  — write the switch to the database; does NOT
-                                    ask for approval itself
-  - log_approval()                — append the planner's decision to approval_log
+Three tools the SAP Agent can call:
+  1. sap_extract()              — pull all relevant SAP data in one shot
+  2. calculate_atp()            — determine fulfillability from current SAP data
+  3. po_logistic_method_change() — switch PO shipping method (SEA → AIR or vice versa)
 """
 
 import logging
@@ -175,8 +168,8 @@ def calculate_atp(
         max_available_date  (str)       — date when max_available is first reached
         pos_checked         (list)      — informational: every PO walked, with
                                           {po_number, menge, eindt, logistic_method,
-                                           cumulative_after}. PO selection is handled
-                                          automatically by plan_po_logistic_change
+                                           cumulative_after}. PO switching is handled
+                                          automatically by po_logistic_method_change
                                           and does not need to be derived from this list.
     """
     today = date.today().isoformat()
@@ -269,18 +262,18 @@ def calculate_atp(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# plan_po_logistic_change
+# po_logistic_method_change
 # ─────────────────────────────────────────────────────────────────────────────
 
-def plan_po_logistic_change(
+def po_logistic_method_change(
     matnr: str,
     werks: str,
     requested_qty: float,
     method: str,
 ) -> dict:
     """
-    Works out which POs would be switched to cover requested_qty, without
-    writing anything to the database.
+    Switches the minimum set of POs to the specified logistic method (AIR or SEA)
+    to cover requested_qty, respecting existing committed sales order allocations.
 
     Internally calls sap_extract() to get current stock, committed sales orders,
     and open POs sorted by earliest delivery date (eindt ASC).
@@ -302,8 +295,11 @@ def plan_po_logistic_change(
     If stock − committed >= 0 from the start (no SO deficit), Phase 1 is skipped
     and switching begins with the very first PO.
 
-    All-or-nothing: if the POs cannot reach requested_qty, the plan switches
-    nothing (covered=False).
+    All-or-nothing: if the POs cannot reach requested_qty, no PO is switched
+    and the database is left unchanged.
+
+    Call this only after the Supervisor has confirmed that air shipping is
+    permitted for the plant.
 
     Parameters
     ----------
@@ -315,24 +311,34 @@ def plan_po_logistic_change(
     Returns
     -------
     dict with keys:
-        covered         (bool)  — True if the switched POs reach requested_qty
-        switch_pos      (list)  — POs to switch: {po_number, eindt, menge,
-                                   old_method, new_method, cumulative_after};
-                                   empty if covered=False
-        remaining_pos   (list)  — PO numbers not switched
-        coverage_qty    (float) — running total at the last PO walked
-        requested_qty   (float) — echoed back
-        method          (str)   — the target method
+        updated_count   (int)   — number of POs switched (0 if coverage unreachable)
+        updated_pos     (list)  — each switched PO: {po_number, eindt, menge,
+                                   old_method, new_method, cumulative_after}
+        remaining_pos   (list)  — POs not switched; includes both POs consumed by
+                                   committed SOs (pre-break-even) and POs not needed
+                                   after coverage is achieved
+        coverage_qty    (float) — running total at the last switched PO
+        requested_qty   (float) — the requested_qty passed in (echoed back)
+        method          (str)   — the method that was applied
+        message         (str)   — human-readable summary
     """
     method = method.upper()
     if method not in ("AIR", "SEA"):
         raise ValueError(f"Invalid logistic method '{method}'. Must be 'AIR' or 'SEA'.")
 
+    logger.info(
+        "[po_logistic_method_change] %s / %s — switching POs to %s to cover qty=%.0f",
+        matnr, werks, method, requested_qty,
+    )
+
     data = sap_extract(matnr, werks)
     committed = sum(so["kwmeng"] for so in data["sales_orders"])
     running = data["stock"] - committed
 
-    switch_pos = []
+    conn = _get_conn()
+    cur = conn.cursor()
+
+    updated_pos = []
     remaining_pos = []
     covered = False
     # True once running >= 0: SO commitments are fully covered and subsequent
@@ -359,11 +365,16 @@ def plan_po_logistic_change(
 
         # switch_active=True: this PO contributes to the new order.
         # Switch it, and keep switching until running >= requested_qty.
-        switch_pos.append({
+        old_method = po["logistic_method"]
+        cur.execute(
+            "UPDATE purchase_orders SET logistic_method = ? WHERE po_number = ?",
+            (method, po["po_number"]),
+        )
+        updated_pos.append({
             "po_number":        po["po_number"],
             "eindt":            po["eindt"],
             "menge":            po["menge"],
-            "old_method":       po["logistic_method"],
+            "old_method":       old_method,
             "new_method":       method,
             "cumulative_after": running,
         })
@@ -371,98 +382,17 @@ def plan_po_logistic_change(
         if running >= requested_qty:
             covered = True
 
-    if not covered:
-        # Partial coverage doesn't solve the order — switch nothing so no PO
-        # is upgraded (and paid for) without fixing the shortage.
-        remaining_pos = [p["po_number"] for p in switch_pos] + remaining_pos
-        switch_pos = []
+    if covered:
+        conn.commit()
+    else:
+        # Partial coverage doesn't solve the order — discard the switches so
+        # no PO is upgraded (and paid for) without fixing the shortage.
+        conn.rollback()
+        remaining_pos = [p["po_number"] for p in updated_pos] + remaining_pos
+        updated_pos = []
+    conn.close()
 
-    return {
-        "covered":       covered,
-        "switch_pos":    switch_pos,
-        "remaining_pos": remaining_pos,
-        "coverage_qty":  running,
-        "requested_qty": requested_qty,
-        "method":        method,
-    }
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# execute_po_logistic_change
-# ─────────────────────────────────────────────────────────────────────────────
-
-def execute_po_logistic_change(
-    matnr: str,
-    werks: str,
-    requested_qty: float,
-    method: str,
-    approval: dict | None = None,
-) -> dict:
-    """
-    Switches the minimum set of POs to the specified logistic method (AIR or SEA)
-    to cover requested_qty, respecting existing committed sales order allocations.
-
-    PO selection is done by plan_po_logistic_change() (break-even to decisive
-    rule); this function writes the result to the database in one transaction.
-
-    All-or-nothing: if the POs cannot reach requested_qty, no PO is switched
-    and the database is left unchanged.
-
-    This function does not ask for approval: it writes as soon as it is called.
-    In the agent workflow it only runs after a planner approves the proposal
-    (see the po_logistic_method_change tool in agents/sap_agent.py).
-
-    Parameters
-    ----------
-    matnr         : material number, e.g. 'MAT001'
-    werks         : plant code, e.g. 'TW01'
-    requested_qty : the customer's requested quantity that must be covered
-    method        : target shipping method — must be 'AIR' or 'SEA'
-    approval      : optional {thread_id, approver, comment}. When given, an
-                    APPROVED row is appended to approval_log in the same
-                    transaction as the PO updates, so a switch is never
-                    recorded without its approval (or the reverse).
-
-    Returns
-    -------
-    dict with keys:
-        updated_count   (int)   — number of POs switched (0 if coverage unreachable)
-        updated_pos     (list)  — each switched PO: {po_number, eindt, menge,
-                                   old_method, new_method, cumulative_after}
-        remaining_pos   (list)  — POs not switched; includes both POs consumed by
-                                   committed SOs (pre-break-even) and POs not needed
-                                   after coverage is achieved
-        coverage_qty    (float) — running total at the last switched PO
-        requested_qty   (float) — the requested_qty passed in (echoed back)
-        method          (str)   — the method that was applied
-        message         (str)   — human-readable summary
-    """
-    logger.info(
-        "[execute_po_logistic_change] %s / %s — switching POs to %s to cover qty=%.0f",
-        matnr, werks, method, requested_qty,
-    )
-
-    plan = plan_po_logistic_change(matnr, werks, requested_qty, method)
-    method = plan["method"]
-    updated_pos = plan["switch_pos"]
-    running = plan["coverage_qty"]
-
-    if plan["covered"]:
-        conn = _get_conn()
-        try:
-            with conn:  # one transaction: all POs switch (and are logged), or nothing is written
-                conn.executemany(
-                    "UPDATE purchase_orders SET logistic_method = ? WHERE po_number = ?",
-                    [(method, p["po_number"]) for p in updated_pos],
-                )
-                if approval is not None:
-                    _insert_approval(
-                        conn, approval.get("thread_id"), matnr, werks, requested_qty, method,
-                        [p["po_number"] for p in updated_pos], "APPROVED",
-                        approval.get("approver"), approval.get("comment"),
-                    )
-        finally:
-            conn.close()
+    if covered:
         msg = (
             f"Switched {len(updated_pos)} PO(s) to {method}. "
             f"Cumulative available after switch: {running:.0f} units "
@@ -476,7 +406,7 @@ def execute_po_logistic_change(
         )
 
     logger.info(
-        "[execute_po_logistic_change] switched %d PO(s) to %s — coverage=%.0f / requested=%.0f",
+        "[po_logistic_method_change] switched %d PO(s) to %s — coverage=%.0f / requested=%.0f",
         len(updated_pos), method, running, requested_qty,
     )
     for p in updated_pos:
@@ -488,62 +418,9 @@ def execute_po_logistic_change(
     return {
         "updated_count": len(updated_pos),
         "updated_pos":   updated_pos,
-        "remaining_pos": plan["remaining_pos"],
+        "remaining_pos": remaining_pos,
         "coverage_qty":  running,
         "requested_qty": requested_qty,
         "method":        method,
         "message":       msg,
     }
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# log_approval
-# ─────────────────────────────────────────────────────────────────────────────
-
-def log_approval(
-    thread_id: str | None,
-    matnr: str,
-    werks: str,
-    requested_qty: float,
-    method: str,
-    po_numbers: list[str],
-    decision: str,
-    approver: str | None,
-    comment: str | None,
-) -> None:
-    """
-    Appends one planner decision to the approval_log table.
-
-    The table is append-only: rows are inserted, never updated or deleted, so
-    it serves as the fulfillment case record required by policy rule 4.
-
-    decision is 'APPROVED', 'REJECTED' or 'STALE_PROPOSAL' (approved, but the
-    SAP data changed after the proposal was shown, so nothing was executed).
-    An executed approval is logged by execute_po_logistic_change(approval=...)
-    instead, in the same transaction as the PO updates.
-    """
-    conn = _get_conn()
-    try:
-        with conn:
-            _insert_approval(conn, thread_id, matnr, werks, requested_qty, method,
-                             po_numbers, decision, approver, comment)
-    finally:
-        conn.close()
-
-
-def _insert_approval(conn, thread_id, matnr, werks, requested_qty, method,
-                     po_numbers, decision, approver, comment) -> None:
-    conn.execute(
-        """
-        INSERT INTO approval_log
-            (thread_id, matnr, werks, requested_qty, method, po_numbers,
-             decision, approver, comment, decided_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-        """,
-        (thread_id, matnr, werks, requested_qty, method, ",".join(po_numbers),
-         decision, approver, comment),
-    )
-    logger.info(
-        "[approval_log] %s / %s — %s by %s for %s",
-        matnr, werks, decision, approver, ",".join(po_numbers) or "(no POs)",
-    )

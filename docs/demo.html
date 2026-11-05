@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATP Fulfillment Agent — Demo Scenario Player</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;background:#f5f5f0;padding:20px;color:#1a1a18}
+h1{font-size:16px;font-weight:500;color:#444441;margin-bottom:16px}
+.wrap{display:grid;grid-template-columns:220px 1fr;gap:0;border:0.5px solid #d4d2c8;border-radius:12px;overflow:hidden;min-height:520px;background:#fff;max-width:900px}
+.sidebar{background:#f5f5f0;border-right:0.5px solid #d4d2c8;padding:12px}
+.sb-title{font-size:10px;font-weight:500;color:#888780;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.sc-btn{width:100%;text-align:left;padding:8px 10px;border-radius:8px;border:0.5px solid #d4d2c8;background:#fff;cursor:pointer;margin-bottom:5px;font-size:11px;line-height:1.3;transition:background .15s}
+.sc-btn:hover{background:#eeeee8}
+.sc-btn.active{border-color:#85B7EB;background:#E6F1FB}
+.sc-btn .tag{display:inline-block;font-size:8px;font-weight:500;padding:1px 4px;border-radius:3px;margin-bottom:2px;color:#fff}
+.tag-s{background:#534AB7}.tag-q{background:#185FA5}.tag-sys{background:#854F0B}.tag-gate{background:#A32D2D}.tag-step{background:#085041}
+.sc-btn .sc-title{font-weight:500;color:#1a1a18;display:block}
+.sc-btn .sc-sub{font-size:9px;color:#5F5E5A}
+.sc-btn.active .sc-title{color:#0C447C}
+.sc-btn.active .sc-sub{color:#185FA5}
+.chat-pane{display:flex;flex-direction:column;background:#fff}
+.chat-topbar{padding:8px 12px;border-bottom:0.5px solid #d4d2c8;display:flex;align-items:center;gap:6px;background:#f5f5f0}
+.dot{width:7px;height:7px;border-radius:50%;background:#3B6D11;flex-shrink:0}
+.dot.busy{background:#854F0B}
+.tb-title{font-size:11px;font-weight:500;color:#1a1a18}
+.tb-sub{font-size:9px;color:#5F5E5A;margin-left:auto}
+.replay-btn{font-size:9px;padding:3px 8px;border-radius:5px;border:0.5px solid #b4b2a9;background:transparent;cursor:pointer;color:#5F5E5A}
+.replay-btn:hover{background:#eeeee8}
+.chat-body{flex:1;padding:10px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;max-height:460px}
+.user-msg{background:#E6F1FB;color:#0C447C;border-radius:10px 10px 2px 10px;padding:7px 10px;font-size:10px;align-self:flex-end;max-width:85%;line-height:1.4}
+.sys-msg{background:#FAEEDA;color:#633806;border-radius:6px;padding:5px 9px;font-size:9px;font-style:italic;border:0.5px solid #EF9F27}
+.step-hdr{font-size:8px;font-weight:500;letter-spacing:.07em;color:#888780;text-transform:uppercase;padding:3px 0}
+.tool-card{border:0.5px solid #d4d2c8;border-radius:5px;padding:4px 7px;background:#f5f5f0;margin-bottom:2px;opacity:0;transform:translateY(4px);transition:opacity .25s,transform .25s}
+.tool-card.show{opacity:1;transform:translateY(0)}
+.tc-top{display:flex;align-items:center;gap:4px}
+.tc-fn{font-family:'SF Mono',Menlo,monospace;font-size:9px;color:#1a1a18;font-weight:500}
+.tc-badge{font-size:7px;padding:1px 4px;border-radius:3px;background:#d4d2c8;color:#5F5E5A}
+.tc-ok{margin-left:auto;font-size:10px;color:#3B6D11}
+.tc-warn{margin-left:auto;font-size:9px;color:#854F0B}
+.tc-result{font-size:9px;color:#5F5E5A;margin-top:1px;line-height:1.3}
+.tc-result strong{color:#1a1a18}
+.always-strip{display:flex;gap:10px;background:#f5f5f0;border-radius:5px;padding:5px 8px;align-items:center;border:0.5px solid #d4d2c8}
+.as-item label{color:#888780;font-size:8px;display:block}
+.as-item span{font-weight:500;color:#1a1a18;font-size:10px}
+.as-item span.good{color:#27500A}
+.conf-mini{display:flex;align-items:center;gap:3px}
+.conf-bar{width:36px;height:3px;background:#d4d2c8;border-radius:2px}
+.conf-fill{height:100%;border-radius:2px}
+.opt-card{border-radius:6px;padding:6px 9px;margin-bottom:4px}
+.opt-card.p1{background:#EAF3DE;border:0.5px solid #97C459}
+.opt-card.p2{background:#E6F1FB;border:0.5px solid #85B7EB}
+.opt-card.p3{background:#f5f5f0;border:0.5px solid #d4d2c8}
+.opt-card.esc{background:#FCEBEB;border:0.5px solid #F09595}
+.opt-top{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.rb{font-size:7px;font-weight:500;padding:2px 5px;border-radius:3px;color:#fff}
+.rb-p1{background:#c05000}.rb-p2{background:#185FA5}.rb-p3{background:#534AB7}.rb-esc{background:#A32D2D}
+.opt-title{font-size:10px;font-weight:500;color:#1a1a18;flex:1}
+.opt-meta{display:flex;gap:8px;font-size:8px;color:#5F5E5A;margin-bottom:3px;flex-wrap:wrap}
+.opt-meta strong{color:#1a1a18}
+.opt-note{font-size:8px;color:#5F5E5A;margin-bottom:4px}
+.opt-note.combine{color:#185FA5}
+.opt-btns{display:flex;gap:4px}
+.obtn{font-size:8px;font-weight:500;padding:3px 7px;border-radius:4px;cursor:pointer;border:0.5px solid;transition:opacity .15s}
+.obtn:hover{opacity:.8}
+.obtn.approve{background:#EAF3DE;color:#27500A;border-color:#97C459}
+.obtn.gate{background:#FAEEDA;color:#633806;border-color:#EF9F27}
+.obtn.sec{background:transparent;color:#5F5E5A;border-color:#b4b2a9}
+.obtn.esc{background:transparent;color:#A32D2D;border-color:#F09595}
+.advisory{background:#FAEEDA;border-left:3px solid #EF9F27;border-radius:0 4px 4px 0;padding:4px 7px;margin:3px 0;border-top:0.5px solid #EF9F27;border-right:0.5px solid #EF9F27;border-bottom:0.5px solid #EF9F27}
+.adv-t{font-size:8px;font-weight:500;color:#633806}
+.adv-b{font-size:8px;color:#633806;margin-top:1px}
+.rec-strip{background:#f5f5f0;border-left:3px solid #3B6D11;border-radius:0 4px 4px 0;padding:4px 7px;border-top:0.5px solid #d4d2c8;border-right:0.5px solid #d4d2c8;border-bottom:0.5px solid #d4d2c8}
+.rec-t{font-size:9px;font-weight:500;color:#1a1a18}
+.rec-s{font-size:8px;color:#5F5E5A;margin-top:1px}
+.action-row{display:flex;gap:4px;margin-top:4px}
+.main-btn{flex:1;text-align:center;padding:5px;border-radius:5px;font-size:9px;font-weight:500;cursor:pointer;border:0.5px solid;transition:opacity .15s}
+.main-btn:hover{opacity:.8}
+.main-btn.approve{background:#EAF3DE;color:#27500A;border-color:#97C459}
+.main-btn.add{background:#E6F1FB;color:#0C447C;border-color:#85B7EB}
+.main-btn.gate{background:#FAEEDA;color:#633806;border-color:#EF9F27}
+.main-btn.esc-btn{background:transparent;color:#A32D2D;border-color:#F09595}
+.muted-line{font-size:8px;color:#888780;padding:1px 0}
+.tech-note{margin-top:10px;padding-top:8px;border-top:0.5px solid #d4d2c8;font-size:8px;color:#888780;line-height:1.5}
+</style>
+</head>
+<body>
+<h1>ATP Fulfillment Agent: demo scenarios <span style="font-size:11px;color:#854F0B;background:#FAEEDA;border:0.5px solid #EF9F27;border-radius:4px;padding:2px 6px;margin-left:6px">Scripted · mock data</span></h1>
+<div class="wrap">
+  <div class="sidebar">
+    <div class="sb-title">Demo scenarios</div>
+    <div class="sc-btn active" onclick="loadScenario(0)">
+      <span class="tag tag-s">STEP · 02</span>
+      <span class="sc-title">Air freight — tonight cutoff</span>
+      <span class="sc-sub">PO-88321 · Jun 20→10 · 100 pcs</span>
+    </div>
+    <div class="sc-btn" onclick="loadScenario(1)">
+      <span class="tag tag-step">STEP · 03</span>
+      <span class="sc-title">STO + QI advisory</span>
+      <span class="sc-sub">PO-88321 · WH03 stock gap</span>
+    </div>
+    <div class="sc-btn" onclick="loadScenario(2)">
+      <span class="tag tag-q">ALL mode</span>
+      <span class="sc-title">Query-all · P1+P2 combo</span>
+      <span class="sc-sub">PO-88321 · 3 ranked options</span>
+    </div>
+    <div class="sc-btn" onclick="loadScenario(3)">
+      <span class="tag tag-sys">SYSTEM</span>
+      <span class="sc-title">System trigger · ATP slip</span>
+      <span class="sc-sub">PO-45221 · Jun 25 vs Jun 18</span>
+    </div>
+    <div class="sc-btn" onclick="loadScenario(4)">
+      <span class="tag tag-gate">GATE</span>
+      <span class="sc-title">WO expedite · OT gate</span>
+      <span class="sc-sub">PO-77341 · WO-3812 bottleneck</span>
+    </div>
+    <div class="sc-btn" onclick="loadScenario(5)">
+      <span class="tag tag-sys">ESC</span>
+      <span class="sc-title">Full escalation · BOM shortage</span>
+      <span class="sc-sub">PO-99102 · CPU-A421 short</span>
+    </div>
+    <div class="tech-note">
+      <strong>About</strong><br>
+      Scripted playback of the<br>target design, mock data.<br>
+      Not live agent output.
+    </div>
+  </div>
+
+  <div class="chat-pane">
+    <div class="chat-topbar">
+      <div class="dot" id="status-dot"></div>
+      <div class="tb-title" id="tb-title">ATP Fulfillment Agent</div>
+      <div class="tb-sub" id="tb-sub">Ready</div>
+      <button class="replay-btn" onclick="replayScenario()">Replay</button>
+    </div>
+    <div class="chat-body" id="chat-body"></div>
+  </div>
+</div>
+
+<script>
+const SCENARIOS = [
+  {
+    title:'ATP Fulfillment Agent', sub:'Step 02 resolved · PROPOSE',
+    trigger:'human', input:'Can we pull in PO-88321 from Jun 20 → Jun 10? 100 units, GB300-NVL72.',
+    stepHdr:'Checking step 02 — faster shipping?',
+    tools:[
+      {fn:'get_shipping_schedule(WH01)', badge:'Shipping Sched.', ok:true, result:'Sea: Jun 20 | Air: +2d, cutoff Jun 10 23:59 ✓'},
+      {fn:'get_air_cutoff(WH01→US)', badge:'TMS/3PL', ok:true, result:'Air available — cutoff tonight 23:59 | Est. cost $3,800'},
+    ],
+    always:{qty:'100 pcs', date:'Jun 10', conf:0.74, path:'02 · Air'},
+    result:{
+      opts:[{cls:'p1',rb:'rb-p1',rbLabel:'FASTEST',title:'Air freight — direct ship tonight',meta:{date:'Jun 10',qty:'100 pcs',cost:'$3,800',action:'GATE'},note:'Cutoff 23:59 tonight. Needs manager approval above $3,000 threshold.',btns:[{cls:'gate',label:'Request approval'},{cls:'sec',label:'Skip'}]}],
+      muted:['Cross-plant STO would arrive Jun 13 — misses requested date.'],
+      adv:null,
+      rec:{text:'Air is the only path that meets Jun 10.',sub:'Qty: 100 pcs · Commit: Jun 10 · Cost: $3,800 · Conf: 74%'},
+      actions:[{cls:'gate',label:'Request approval'},{cls:'sec',label:'Check STO anyway'}],
+    }
+  },
+  {
+    title:'ATP Fulfillment Agent', sub:'Step 03 resolved · PROPOSE + Advisory',
+    trigger:'human', input:'Can we pull in PO-88321 from Jun 20 → Jun 10? 100 units, GB300-NVL72.',
+    stepHdr:'Checking step 03 — cross-plant inventory?',
+    tools:[
+      {fn:'get_atp_status(PO-88321)', badge:'SAP CO9', ok:true, result:'Free ATP: 30u | Shortfall: 70 | Replenishment: Jun 12'},
+      {fn:'get_stock_by_plant(GB300-NVL72, all)', badge:'SAP MD04', ok:true, result:'完稅廠 WH02: 120u ✓ | WH03: 0 (CO9) | WH04: 45u'},
+      {fn:'check_tax_status(WH02)', badge:'SAP', ok:true, result:'完稅廠 — duty cleared ✓'},
+      {fn:'get_std_stock(WH03)', badge:'SAP MB52', warn:true, result:'MMBE: unrestricted 0 | in_quality 1,262 | blocked 0'},
+    ],
+    always:{qty:'100 pcs', date:'Jun 11', conf:0.82, path:'03 · STO'},
+    result:{
+      opts:[{cls:'p1',rb:'rb-p1',rbLabel:'P1 FASTEST',title:'STO from 完稅廠 WH02',meta:{date:'Jun 11',qty:'100 pcs',cost:'$1,200',action:'PROPOSE'},note:'120u available, duty cleared, no additional tax. Est. ship Jun 11 via air.',btns:[{cls:'approve',label:'Approve STO'},{cls:'sec',label:'Reject'}]}],
+      muted:['WH04: 45 units — splittable but only partial coverage.'],
+      adv:{title:'⚠ WH03 stock gap — 1,262 units (MMBE) but CO9 ATP = 0',body:'All stock under Quality Inspection (open lot). Cannot ship until usage decision (UD) made.',action:'→ Contact QM Manager · QA32 for inspection lot status and UD date'},
+      rec:{text:'STO from WH02 covers full 100 pcs.',sub:'Qty: 100 pcs · Commit: Jun 11 · Cost: $1,200 · Conf: 82%'},
+      actions:[{cls:'approve',label:'Approve STO WH02'},{cls:'sec',label:'Add WH04 split'}],
+    }
+  },
+  {
+    title:'ATP Fulfillment Agent', sub:'Query-all complete · 3 options found',
+    trigger:'human', input:'Can we pull in PO-88321 from Jun 20 → Jun 10? 100 units, GB300-NVL72. Query all paths.',
+    stepHdr:'Querying all paths simultaneously...',
+    tools:[
+      {fn:'get_atp_status(PO-88321)', badge:'SAP CO9', ok:true, result:'Free ATP: 30u | Shortfall: 70'},
+      {fn:'get_shipping_schedule(WH02)', badge:'Shipping Sched.', ok:true, result:'Air cutoff Jun 10 23:59 ✓ | Est. $3,800'},
+      {fn:'get_stock_by_plant(GB300-NVL72, all)', badge:'SAP MD04', ok:true, result:'完稅廠 WH02: 120u ✓ | WH03: 0 | WH04: 45u'},
+      {fn:'check_container_status(PO-7731)', badge:'Logistics', ok:true, result:'WH04 pre-container, not loaded — splittable ✓'},
+      {fn:'get_bom_alternatives(GB300-NVL72)', badge:'SAP CS03', ok:true, result:'GB300-NVL71: similar spec, 200u @ WH01'},
+      {fn:'get_wo_status(WO-4421)', badge:'MES/CO3', warn:true, result:'Stage SMT 4/8 | Exit Jun 13 | Expedite: needs OT approval'},
+    ],
+    always:{qty:'100 pcs', date:'Jun 11', conf:0.82, path:'03 · STO'},
+    result:{
+      opts:[
+        {cls:'p1',rb:'rb-p1',rbLabel:'P1 FASTEST',title:'STO from 完稅廠 WH02',meta:{date:'Jun 11',qty:'100 pcs',cost:'$1,200',action:'PROPOSE'},note:'120u available, duty cleared.',btns:[{cls:'approve',label:'Approve STO'},{cls:'sec',label:'Skip'}]},
+        {cls:'p2',rb:'rb-p2',rbLabel:'P2',title:'Split PO-7731 from WH04',meta:{date:'Jun 11',qty:'45 pcs',cost:'$800',action:'PROPOSE'},note:'45u not loaded — redirect air. Combine with P1 for full 100 pcs.',btns:[{cls:'approve',label:'Add P2 split'},{cls:'sec',label:'Skip'}]},
+        {cls:'p3',rb:'rb-p3',rbLabel:'P3',title:'Substitute GB300-NVL71 (WH01)',meta:{date:'Jun 12',qty:'100 pcs',cost:'$0',action:'GATE · PM'},note:'Spec compatible, 200u, above MOQ. Needs PM confirmation. Contingency.',btns:[{cls:'gate',label:'Request PM'},{cls:'sec',label:'Skip'}]},
+      ],
+      muted:['WO expedite: needs OT approval (+cost). Not recommended.'],
+      adv:null,
+      rec:{text:'Recommend P1 + partial P2 to cover 100 units.',sub:'Qty: 100 pcs · Commit: Jun 11 · Est. total: $2,000 · Conf: 82%'},
+      actions:[{cls:'approve',label:'Approve P1 (STO WH02)'},{cls:'add',label:'Add P2 split'}],
+    }
+  },
+  {
+    title:'ATP Fulfillment Agent', sub:'System trigger · Step 03 resolved',
+    trigger:'system', input:'[System] PO-45221 overcommitted — ATP date slipped to Jun 25 vs commit Jun 18.',
+    stepHdr:'Step 02 — faster shipping?',
+    tools:[
+      {fn:'get_atp_status(PO-45221)', badge:'SAP CO9', ok:true, result:'ATP slipped — WO-3812 delayed at AOI | New ATP: Jun 22'},
+      {fn:'get_shipping_schedule(WH01)', badge:'Shipping Sched.', ok:true, result:'Current sea Jun 25 | Air +2d = Jun 20 — still misses Jun 18'},
+      {fn:'get_stock_by_plant(pn)', badge:'SAP MD04', ok:true, result:'完稅廠 WH02: 60u ✓ | WH03: 0'},
+    ],
+    always:{qty:'100 pcs', date:'Jun 17', conf:0.81, path:'03 · STO+Air'},
+    result:{
+      opts:[
+        {cls:'p1',rb:'rb-p1',rbLabel:'OPTION A',title:'STO WH02→WH01 + air',meta:{date:'Jun 17',qty:'60 pcs',cost:'$2,500',action:'PROPOSE'},note:'60u from 完稅廠 WH02 via air — arrive Jun 17 (1-day buffer).',btns:[{cls:'approve',label:'Approve STO+air'},{cls:'sec',label:'Skip'}]},
+        {cls:'p2',rb:'rb-p2',rbLabel:'OPTION B',title:'Notify customer — Jun 22',meta:{date:'Jun 22',qty:'100 pcs',cost:'$0',action:'AUTO'},note:'Accept slip. WO exits Jun 20, sea ships Jun 22.',btns:[{cls:'approve',label:'Accept Jun 22'},{cls:'sec',label:'Skip'}]},
+      ],
+      muted:['WO-3812 delayed at AOI bottleneck — exit revised Jun 20 (+5d). Expediting requires OT.'],
+      adv:{title:'Root cause: WO-3812 delayed at AOI',body:'Exit revised from Jun 15 to Jun 20 (+5 days). 40 units from WH02 available as partial bridge.',action:'→ MFG team to confirm AOI bottleneck ETA'},
+      rec:{text:'Option A covers 60 pcs by Jun 17. Notify customer of 40-pcs delta.',sub:'Qty partial: 60 pcs · Commit: Jun 17 · Cost: $2,500 · Conf: 81%'},
+      actions:[{cls:'approve',label:'Approve Option A'},{cls:'add',label:'Accept Option B'}],
+    }
+  },
+  {
+    title:'ATP Fulfillment Agent', sub:'Step 05 · WO expedite · GATE',
+    trigger:'human', input:'Pull in PO-77341 from Jun 28 → Jun 20? 80 units, GB500-NVL10.',
+    stepHdr:'Checking step 05 — WO expedite?',
+    tools:[
+      {fn:'get_atp_status(PO-77341)', badge:'SAP CO9', ok:true, result:'ATP: 0 units | WO-3820 in progress'},
+      {fn:'get_wo_status(WO-3820)', badge:'MES/CO3', warn:true, result:'Stage AOI 5/8 | Exit: Jun 24 | Expedite needs OT + line re-priority'},
+      {fn:'get_stock_by_plant(GB500-NVL10)', badge:'SAP MD04', ok:true, result:'All plants: 0 available — WO only source'},
+      {fn:'request_expedite(WO-3820)', badge:'MFG Portal', warn:true, result:'Overtime required — routed to MFG manager GATE'},
+    ],
+    always:{qty:'80 pcs', date:'Jun 22', conf:0.68, path:'05 · WO expedite'},
+    result:{
+      opts:[{cls:'p1',rb:'rb-p1',rbLabel:'GATE',title:'WO-3820 expedite + overtime',meta:{date:'Jun 22',qty:'80 pcs',cost:'$4,100',action:'GATE'},note:'2-day pull-in feasible with OT approval. MFG manager approval required.',btns:[{cls:'gate',label:'Request MFG approval'},{cls:'sec',label:'Reject'}]}],
+      muted:['No STO options — all plants at zero. No BOM alternative found.'],
+      adv:{title:'⚠ GATE: overtime cost $4,100 requires manager approval',body:'OT for 2 shifts + line re-priority. MFG manager must approve before expedite submitted.',action:'→ Routing to MFG manager approval queue · expires in 4 hours'},
+      rec:{text:'Expedite feasible Jun 22 but requires GATE approval.',sub:'Qty: 80 pcs · Commit: Jun 22 · OT cost: $4,100 · Conf: 68%'},
+      actions:[{cls:'gate',label:'Request MFG approval'},{cls:'esc-btn',label:'Escalate to planner'}],
+    }
+  },
+  {
+    title:'ATP Fulfillment Agent', sub:'Step 06 · Full escalation',
+    trigger:'human', input:'Pull in PO-99102 from Jul 10 → Jun 25? 150 units, GB300-NVL72.',
+    stepHdr:'Checking step 06 — material root cause...',
+    tools:[
+      {fn:'get_atp_status(PO-99102)', badge:'SAP CO9', ok:true, result:'ATP: 0 | All steps exhausted above'},
+      {fn:'get_bom_shortage(GB300-NVL72, 150)', badge:'SAP CS03', warn:true, result:'CPU-A421: 80 short | Supplier: SUP-03 | Alt: none'},
+      {fn:'get_supplier_commit(CPU-A421, SUP-03)', badge:'SRM', warn:true, result:'Commit: Jun 28 | Qty: 80u | Confidence: 0.41 (low)'},
+      {fn:'get_bom_shortage(GB300-NVL72, 150)', badge:'SAP CS03', warn:true, result:'MEM-B220: 30 short | Supplier: SUP-07 | Commit: Jun 22'},
+    ],
+    always:{qty:'150 pcs', date:null, conf:0.41, path:'06 · ESCALATE'},
+    result:{
+      opts:[{cls:'esc',rb:'rb-esc',rbLabel:'ESCALATE',title:'Material shortage — no commit possible',meta:{date:'Cannot commit',qty:'150 pcs',cost:'—',action:'ESCALATE'},note:'CPU-A421: 80 short, SUP-03 commits Jun 28 (low confidence). MEM-B220: 30 short, Jun 22.',btns:[{cls:'esc',label:'Escalate to Sourcing'}]}],
+      muted:['Air, STO, rework, WO expedite — all paths checked and exhausted.'],
+      adv:{title:'Short components: CPU-A421 (-80u) · MEM-B220 (-30u)',body:'Binding constraint: CPU-A421 supplier commit Jun 28 with 0.41 confidence. Earliest possible: Jul 1 assuming SUP-03 commit holds.',action:'→ Escalating to Sourcing with full shortage packet · Audit log updated'},
+      rec:{text:'Cannot commit Jun 25. Earliest realistic: Jul 1 (if SUP-03 holds).',sub:'Qty: 150 pcs · No commit · Conf: 41% · Action: ESCALATE to Sourcing'},
+      actions:[{cls:'esc-btn',label:'Escalate to Sourcing'},{cls:'sec',label:'View shortage packet'}],
+    }
+  },
+];
+
+let currentScenario=0;
+
+function el(id){return document.getElementById(id)}
+function sc(){return SCENARIOS[currentScenario]}
+
+function loadScenario(idx){
+  currentScenario=idx;
+  document.querySelectorAll('.sc-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  el('tb-title').textContent=sc().title;
+  el('chat-body').innerHTML='';
+  el('status-dot').className='dot busy';
+  el('tb-sub').textContent='Processing...';
+  runScenario();
+}
+
+function replayScenario(){loadScenario(currentScenario)}
+
+function addEl(html,delay=0){
+  return new Promise(r=>setTimeout(()=>{
+    const d=document.createElement('div');
+    d.innerHTML=html;
+    el('chat-body').appendChild(d.firstElementChild);
+    el('chat-body').scrollTop=el('chat-body').scrollHeight;
+    r();
+  },delay));
+}
+
+async function runScenario(){
+  const s=sc();
+  await new Promise(r=>setTimeout(r,200));
+
+  if(s.trigger==='system'){
+    await addEl(`<div class="sys-msg">${s.input}</div>`);
+  } else {
+    await addEl(`<div class="user-msg">${s.input}</div>`);
+  }
+  await new Promise(r=>setTimeout(r,400));
+  await addEl(`<div class="step-hdr">${s.stepHdr}</div>`);
+  await new Promise(r=>setTimeout(r,200));
+
+  for(let i=0;i<s.tools.length;i++){
+    const t=s.tools[i];
+    const icon=t.warn?`<span class="tc-warn">⚠</span>`:`<span class="tc-ok">✓</span>`;
+    const id=`tc-${Date.now()}-${i}`;
+    await addEl(`<div class="tool-card" id="${id}">
+      <div class="tc-top"><span class="tc-fn">${t.fn}</span><span class="tc-badge">${t.badge}</span>${icon}</div>
+      <div class="tc-result">${t.result}</div>
+    </div>`,i===0?0:380);
+    await new Promise(r=>setTimeout(r,80));
+    document.getElementById(id)?.classList.add('show');
+  }
+  await new Promise(r=>setTimeout(r,500));
+
+  const dateDisp=s.always.date||'Cannot commit';
+  const dateColor=s.always.date?'good':'';
+  const confPct=Math.round(s.always.conf*100);
+  const confHex=confPct>=75?'#27500A':confPct>=60?'#854F0B':'#A32D2D';
+  await addEl(`<div class="always-strip">
+    <div class="as-item"><label>Qty</label><span>${s.always.qty}</span></div>
+    <div class="as-item"><label>Commit date</label><span class="${dateColor}">${dateDisp}</span></div>
+    <div class="as-item"><label>Confidence</label>
+      <div class="conf-mini"><div class="conf-bar"><div class="conf-fill" style="width:${confPct}%;background:${confHex}"></div></div>
+      <span style="font-size:8px;font-weight:500;color:${confHex}">${confPct}%</span></div>
+    </div>
+    <div class="as-item"><label>Path</label><span>${s.always.path}</span></div>
+  </div>`);
+  await new Promise(r=>setTimeout(r,300));
+
+  for(const opt of s.result.opts){
+    const metaHtml=Object.entries(opt.meta).map(([k,v])=>`<span>${k} <strong>${v}</strong></span>`).join('');
+    const btnsHtml=opt.btns.map(b=>`<div class="obtn ${b.cls}">${b.label}</div>`).join('');
+    await addEl(`<div class="opt-card ${opt.cls}">
+      <div class="opt-top"><span class="rb ${opt.rb}">${opt.rbLabel}</span><span class="opt-title">${opt.title}</span></div>
+      <div class="opt-meta">${metaHtml}</div>
+      <div class="opt-note">${opt.note}</div>
+      <div class="opt-btns">${btnsHtml}</div>
+    </div>`,200);
+  }
+
+  for(const m of s.result.muted){
+    await addEl(`<div class="muted-line">${m}</div>`,100);
+  }
+
+  if(s.result.adv){
+    await addEl(`<div class="advisory">
+      <div class="adv-t">${s.result.adv.title}</div>
+      <div class="adv-b">${s.result.adv.body}</div>
+      <div class="adv-b" style="font-weight:500;margin-top:2px">${s.result.adv.action}</div>
+    </div>`,200);
+  }
+
+  await addEl(`<div class="rec-strip">
+    <div class="rec-t">${s.result.rec.text}</div>
+    <div class="rec-s">${s.result.rec.sub}</div>
+  </div>`,200);
+
+  const mainBtns=s.result.actions.map(a=>`<div class="main-btn ${a.cls}">${a.label}</div>`).join('');
+  await addEl(`<div class="action-row">${mainBtns}</div>`,100);
+
+  el('status-dot').className='dot';
+  el('tb-sub').textContent=sc().sub;
+}
+
+loadScenario(0);
+</script>
+</body>
+</html>

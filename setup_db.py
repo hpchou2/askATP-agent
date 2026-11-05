@@ -16,10 +16,6 @@ from datetime import date, timedelta
 # Place the database file in the same folder as this script
 DB_PATH = os.path.join(os.path.dirname(__file__), "sap_mock.db")
 
-# LangGraph checkpoints (workflow runs paused for planner approval) — same path
-# as CHECKPOINT_DB_PATH in api.py
-CHECKPOINT_DB_PATH = os.path.join(os.path.dirname(__file__), "checkpoints.db")
-
 # Days after the seed date for each PO arrival and SO due date
 PO_ARRIVAL_DAYS = {
     "PO1001": 40, "PO1002": 45, "PO1003": 50,
@@ -86,24 +82,6 @@ def create_tables(conn: sqlite3.Connection) -> None:
             kwmeng    REAL,              -- Confirmed quantity: amount promised to the customer
             edatu     TEXT,              -- Customer's requested delivery date (YYYY-MM-DD)
             status    TEXT               -- 'OPEN' = confirmed but not yet shipped
-        )
-    """)
-
-    # approval_log: append-only record of planner decisions on proposed PO
-    # switches (the fulfillment case record required by policy rule 4)
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS approval_log (
-            log_id        INTEGER PRIMARY KEY AUTOINCREMENT,
-            thread_id     TEXT,  -- Workflow run ID returned by POST /atp-check
-            matnr         TEXT,  -- Material number
-            werks         TEXT,  -- Plant
-            requested_qty REAL,  -- Quantity the new order needs
-            method        TEXT,  -- Target logistic method (e.g. 'AIR')
-            po_numbers    TEXT,  -- Comma-separated POs in the proposal
-            decision      TEXT,  -- 'APPROVED', 'REJECTED' or 'STALE_PROPOSAL'
-            approver      TEXT,  -- Who made the decision
-            comment       TEXT,  -- Optional note from the approver
-            decided_at    TEXT   -- UTC timestamp (YYYY-MM-DD HH:MM:SS)
         )
     """)
 
@@ -201,21 +179,6 @@ def seed_data(conn: sqlite3.Connection, base: date | None = None) -> None:
 
 
 def main() -> None:
-    # Workflow runs waiting for approval refer to the old data, so clear them
-    # too. Done first: if the API server still holds the file open, stop here
-    # before anything has been deleted.
-    try:
-        for suffix in ("", "-wal", "-shm"):
-            path = CHECKPOINT_DB_PATH + suffix
-            if os.path.exists(path):
-                os.remove(path)
-                if not suffix:
-                    print(f"[setup] Removed pending workflow runs: {CHECKPOINT_DB_PATH}")
-    except PermissionError:
-        raise SystemExit(
-            f"[setup] {CHECKPOINT_DB_PATH} is in use. Stop the API server, then run this again."
-        )
-
     if os.path.exists(DB_PATH):
         os.remove(DB_PATH)
         print(f"[setup] Removed old database: {DB_PATH}")
@@ -228,7 +191,6 @@ def main() -> None:
     base = date.today()
     print(f"[setup] Database created  : {DB_PATH}")
     print("[setup] Tables populated  : material_master, stock, purchase_orders, sales_orders")
-    print("[setup] Table created     : approval_log (empty)")
     print(f"[setup] Dates are relative to today ({base.isoformat()})")
     print()
     print("  Material | Stock | SO Committed | Net Avail | POs (all SEA)")

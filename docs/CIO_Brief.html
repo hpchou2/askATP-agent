@@ -247,6 +247,142 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+.wf-fig .c-pre > rect, .wf-fig .c-pre > circle {fill: #FFFFFF; stroke: #C9D0DA; stroke-width: 1;}
+.wf-fig .c-pre .nth {fill: #374151; font-weight: 600;}
+.wf-fig .c-pre .nts {fill: #6B7280;}
+.wf-fig .c-blue > rect {fill: #F9FAFB; stroke: #4B5563; stroke-width: 1;}
+.wf-fig .c-blue .nth {fill: #111827; font-weight: 600;}
+.wf-fig .c-blue .nts {fill: #4B5563;}
+.wf-fig .c-amber > rect {fill: #FFFDF7; stroke: var(--accent-hitl); stroke-width: 1.5;}
+.wf-fig .c-amber .nth {fill: var(--accent-hitl); font-weight: 600;}
+.wf-fig .c-amber .nts {fill: var(--accent-hitl);}
+.wf-fig .c-green > rect {fill: #F9FAFB; stroke: #4B5563; stroke-width: 1;}
+.wf-fig .c-green .nth {fill: #111827; font-weight: 600;}
+.wf-fig .c-green .nts {fill: #4B5563;}
+.wf-fig .c-teal > rect {fill: #F9FAFB; stroke: #374151; stroke-width: 1;}
+.wf-fig .c-teal .nth {fill: #111827; font-weight: 600;}
+.wf-fig .c-teal .nts {fill: #4B5563;}
+.wf-fig .c-red > rect {fill: #FEF2F2; stroke: #DC2626; stroke-width: 1;}
+.wf-fig .c-red .nth {fill: #7F1D1D; font-weight: 600;}
+.wf-fig .c-red .nts {fill: #B91C1C;}
+.wf-fig .c-purple > rect {fill: #F9FAFB; stroke: #4B5563; stroke-width: 1;}
+.wf-fig .c-purple .nth {fill: #111827; font-weight: 600;}
+.wf-fig .c-purple .nts {fill: #4B5563;}
+.wf-fig .c-policy > rect {fill: #EFF6FF; stroke: var(--accent-policy); stroke-width: 1.5;}
+.wf-fig .c-policy .nth {fill: #1E3A8A; font-weight: 600;}
+.wf-fig .c-policy .nts {fill: #1D4ED8;}
+.wf-fig .nth {font-size: 12px; dominant-baseline: central; text-anchor: middle;}
+.wf-fig .nts {font-size: 10px; dominant-baseline: central; text-anchor: middle;}
+.wf-fig .a-main {stroke: #6B7280; stroke-width: 1.2; fill: none;}
+.wf-fig .a-yes {stroke: #10B981; stroke-width: 1.1; fill: none; stroke-dasharray: 5 3;}
+.wf-fig .a-no {stroke: #9CA3AF; stroke-width: 1.1; fill: none; stroke-dasharray: 4 3;}
+.wf-fig .a-esc {stroke: #EF4444; stroke-width: 1.1; fill: none; stroke-dasharray: 4 3;}
+.wf-fig .a-skip {stroke: #0D9488; stroke-width: 1.1; fill: none; stroke-dasharray: 6 3;}
+.wf-fig .a-hitl {stroke: var(--accent-hitl); stroke-width: 1.1; fill: none; stroke-dasharray: 5 2;}
+.wf-fig .el {font-size: 9px;}
+.wf-fig .el-y {fill: #059669;}
+.wf-fig .el-n {fill: #6B7280;}
+.wf-fig .el-e {fill: #DC2626;}
+.wf-fig .el-s {fill: #0D9488;}
+.wf-fig .el-h {fill: var(--accent-hitl);}
+.wf-fig .sl-label {font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;}
+.wf-fig { --ag-bg:#F4F6F9; --ag-border:#C9D0DA; --ink-mid:#374151; --accent-policy:#2563EB; --accent-hitl:#B45309; }
+.wf-fig svg text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+.wf-fig .wf-step .nts { font-size: 9px; }
+.wf-fig.hide-built .built-layer { display: none; }
+
+/* WORKFLOW FIGURE */
+.wf-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:1rem; margin:1.5rem 0 1rem; }
+.wf-tabs { display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+.wf-tab { background:var(--surface); color:var(--muted); border:none; padding:.5rem 1.1rem; font-size:.8rem; cursor:pointer; border-right:1px solid var(--border); }
+.wf-tab:last-child { border-right:none; }
+.wf-tab.active { background:rgba(59,130,246,.18); color:var(--text); font-weight:600; }
+.wf-check { font-size:.78rem; color:#94a3b8; display:flex; align-items:center; gap:.4rem; cursor:pointer; }
+.wf-legend { display:flex; gap:1rem; font-size:.72rem; color:var(--muted); flex-wrap:wrap; }
+.wf-legend i { display:inline-block; width:22px; height:0; border-top:2px solid; vertical-align:middle; margin-right:4px; }
+#workflow { max-width:1360px; }
+.wf-grid { display:grid; grid-template-columns: minmax(0,2.15fr) minmax(0,1fr); gap:1.5rem; align-items:start; }
+@media(max-width: 900px){ .wf-grid { grid-template-columns:1fr; } }
+.wf-fig { background:#F8FAFC; border:1px solid var(--border); border-radius:14px; padding:1rem; }
+.wf-fig .wf-par { display:none; }
+.wf-fig.show-par .wf-par { display:block; } .wf-fig.show-par .wf-step { display:none; }
+.wf-notes { position:sticky; top:70px; }
+.wf-notes .card { padding:1.3rem; }
+.wf-notes h3 { font-size:.92rem; }
+.wf-notes ul li { font-size:.8rem; }
+.wf-note-par { display:none; }
+.show-par-notes .wf-note-par { display:block; } .show-par-notes .wf-note-step { display:none; }
+.mode-compare { display:grid; grid-template-columns:1fr 1fr; gap:1.2rem; margin-top:2rem; }
+@media(max-width:700px){ .mode-compare { grid-template-columns:1fr; } }
+.mode-compare .card p { font-size:.83rem; color:#94a3b8; margin-bottom:.6rem; }
+.kv { font-size:.78rem; color:#cbd5e1; display:grid; grid-template-columns:110px 1fr; gap:.25rem .8rem; margin-top:.6rem; }
+.kv b { color:var(--muted); font-weight:600; text-transform:uppercase; font-size:.68rem; letter-spacing:.06em; padding-top:2px; }
+
+/* DEMO */
+.honesty { display:flex; gap:.9rem; align-items:flex-start; background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.35); border-radius:12px; padding:1rem 1.2rem; margin:1.5rem 0; }
+.honesty p { font-size:.85rem; color:#cbd5e1; }
+.honesty strong { color:var(--amber); }
+.demo-frame { width:100%; height:640px; border:1px solid var(--border); border-radius:14px; background:#f5f5f0; }
+.status-pill { display:inline-block; font-size:.68rem; font-weight:700; padding:2px 8px; border-radius:4px; }
+.st-built { background:rgba(16,185,129,.15); color:var(--green); }
+.st-partial { background:rgba(245,158,11,.15); color:var(--amber); }
+.st-design { background:rgba(100,116,139,.18); color:#94a3b8; }
+
+/* SCOPE */
+.coverage { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-top:1.5rem; }
+@media(max-width:800px){ .coverage { grid-template-columns:1fr; } }
+.coverage .card { padding:1.3rem; }
+.coverage h3 { font-size:.9rem; margin-bottom:.7rem; }
+.coverage ul li { font-size:.8rem; }
+.assumption-item p + p { margin-top:.35rem; }
+.assumption-item .now { color:var(--amber); font-weight:700; font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; margin-right:.35rem; }
+.assumption-item .tgt { color:var(--green); font-weight:700; font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; margin-right:.35rem; }
+.gap-table td:first-child { color:#f1f5f9; font-weight:600; white-space:nowrap; }
+.gap-table td { font-size:.8rem; vertical-align:top; }
+
+/* ROADMAP extras */
+.roadmap-content ul { list-style:none; }
+.roadmap-dot.later { background: rgba(6,182,212,0.2); border-color: var(--accent2); color: var(--accent2); }
+.roadmap-content .gate { margin-top:.5rem; font-size:.78rem; color:#cbd5e1; background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:6px; padding:.45rem .7rem; }
+.kpi-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-top:.5rem; }
+@media(max-width:800px){ .kpi-row { grid-template-columns:1fr 1fr; } }
+.kpi { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem; }
+.kpi .k { font-size:.85rem; font-weight:700; color:var(--accent2); }
+.kpi .d { font-size:.75rem; color:#94a3b8; margin-top:.25rem; }
+
+/* PM PERSPECTIVE */
+.pm-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; max-width:1000px; margin:0 auto; text-align:left; }
+@media(max-width:800px){ .pm-grid { grid-template-columns:1fr; } }
+.pm-grid .card { padding:1.3rem; }
+.pm-grid .t { font-size:.9rem; font-weight:700; margin:.4rem 0 .35rem; color:#f1f5f9; }
+.pm-grid .d { font-size:.8rem; color:#94a3b8; }
+.tradeoffs { max-width:1000px; margin:1.5rem auto 0; text-align:left; }
+.tradeoffs table td { font-size:.8rem; vertical-align:top; }
+.tradeoffs td:first-child { color:#f1f5f9; font-weight:600; width:26%; }
+
+.phase-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-top:1.5rem; }
+@media(max-width:900px){ .phase-grid { grid-template-columns:1fr 1fr; } }
+.phase { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.2rem; border-top:3px solid var(--accent); }
+.phase.p2 { border-top-color:var(--accent3); } .phase.p3 { border-top-color:var(--green); } .phase.p4 { border-top-color:var(--accent2); }
+.phase .ph { font-size:.7rem; font-weight:700; letter-spacing:.1em; color:var(--muted); text-transform:uppercase; }
+.phase h4 { font-size:.95rem; margin:.2rem 0 .3rem; color:#f1f5f9; }
+.phase p { font-size:.8rem; color:#94a3b8; margin-bottom:.5rem; }
+.phase ul { list-style:none; }
+.phase ul li { font-size:.78rem; color:#cbd5e1; padding-left:.9rem; position:relative; margin-bottom:.2rem; }
+.phase ul li::before { content:'·'; position:absolute; left:.2rem; color:var(--muted); }
+.phase .g { margin-top:.6rem; font-size:.74rem; color:#94a3b8; border-top:1px dashed var(--border); padding-top:.5rem; }
+.compare-table td { font-size:.84rem; vertical-align:top; }
+.compare-table td:first-child { color:#f1f5f9; font-weight:600; white-space:nowrap; }
+.compare-table td:nth-child(2) { color:#94a3b8; }
+.oq { margin-top:1.5rem; font-size:.84rem; color:#94a3b8; }
+.oq b { color:#f1f5f9; }
+.pm-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; max-width:1050px; margin:0 auto; text-align:left; }
+@media(max-width:900px){ .pm-row { grid-template-columns:1fr 1fr; } }
+.pm-row .card { padding:1.2rem; }
+.pm-row .t { font-size:.9rem; font-weight:700; color:#f1f5f9; margin-bottom:.35rem; }
+.pm-row .d { font-size:.8rem; color:#94a3b8; }
+.wf-notes ul li strong { color:var(--text); }
+
 </style>
 </head>
 <body>
@@ -257,7 +393,9 @@
     <a href="#problem">Problem</a>
     <a href="#architecture">Architecture</a>
     <a href="#intelligence">AI Logic</a>
-    <a href="#assumptions">Assumptions</a>
+    <a href="#workflow">Workflow</a>
+    <a href="#demo">Demo</a>
+    <a href="#assumptions">Scope</a>
     <a href="#roadmap">Roadmap</a>
   </div>
 </nav>
@@ -265,10 +403,10 @@
 <!-- HERO -->
 <div class="hero">
   <div class="eyebrow">Prototype · Supply Chain AI</div>
-  <h1>Autonomous ATP Fulfillment<br><span>Powered by Multi-Agent AI</span></h1>
+  <h1>ATP Fulfillment Agent<br><span>for Supply Chain Planners</span></h1>
   <p class="subtitle">
-    An AI agent system that checks inventory availability, evaluates delivery feasibility,
-    and proposes air freight when policy allows it — executed only after a planner approves.
+    Checks whether a customer order can arrive on time and, when it can't,
+    proposes switching shipments to air freight within company policy.
   </p>
   <div class="tags">
     <span class="tag">Supply Chain</span>
@@ -291,10 +429,6 @@
       <div class="num">100%</div>
       <div class="label">Decision Auditability</div>
     </div>
-    <div class="metric-card">
-      <div class="num">0</div>
-      <div class="label">Manual Touches</div>
-    </div>
   </div>
 </div>
 
@@ -305,12 +439,12 @@
   <div class="section-label">Context & Motivation</div>
   <h2>The Problem This Solves</h2>
   <p class="intro-text">
-    In supply chain operations, every delayed order triggers a manual chase: check SAP stock, check purchase orders,
-    consult the logistics policy, decide whether to switch freight mode. This takes hours — and errors are costly.
+    Every late order starts a manual chase: check SAP stock, check purchase orders, check the logistics policy,
+    decide whether to switch to air. It takes hours, and mistakes are expensive.
   </p>
   <div class="split">
     <div class="card">
-      <h3>⚠️ Before: Manual Workflow</h3>
+      <h3>Before: Manual Workflow</h3>
       <ul>
         <li><strong>Planner queries SAP</strong> for stock and open POs (15–30 min)</li>
         <li><strong>ATP calculation</strong> done manually in spreadsheet (error-prone)</li>
@@ -321,15 +455,14 @@
       </ul>
     </div>
     <div class="card highlighted">
-      <h3>✅ After: AI Agent Workflow</h3>
+      <h3>After: AI Agent Workflow</h3>
       <ul>
-        <li><strong>One API call</strong> runs the whole check (about a minute); a second call approves any PO change</li>
+        <li><strong>Single API call</strong> triggers the entire workflow (seconds)</li>
         <li><strong>Deterministic ATP logic</strong> mirrors SAP's calculation engine</li>
         <li><strong>Policy enforcement</strong> is automated and plant-specific</li>
-        <li><strong>Minimum POs switched</strong> — cost impact minimized algorithmically</li>
-        <li><strong>Planner sign-off</strong> — one approval call before any PO changes; every decision logged</li>
+        <li><strong>Minimum POs switched</strong>: cost impact kept to a minimum</li>
         <li><strong>Full trace</strong> of every agent decision and tool call returned</li>
-        <li><strong>Consistent</strong> — temperature=0 keeps routing repeatable; the numbers never depend on the LLM</li>
+        <li><strong>Consistent</strong>: temperature=0 keeps routing repeatable; the numbers never depend on the LLM</li>
       </ul>
     </div>
   </div>
@@ -339,7 +472,7 @@
     <p>
       ATP is a core SAP supply chain function: "Can we promise this customer their <strong>X units by date Y?</strong>"
       The answer depends on current unrestricted stock, minus committed open sales orders, plus expected incoming
-      purchase orders — walked chronologically until coverage is reached. This system replicates that logic
+      purchase orders, walked in date order until coverage is reached. This system replicates that logic
       in Python, then adds AI reasoning on top for escalation decisions.
     </p>
   </div>
@@ -370,7 +503,7 @@
     <div class="flow-arrow">→</div>
     <div class="flow-node">
       <div class="flow-box amber">SAP Agent<div class="sub">ReAct</div></div>
-      <div class="flow-label">Extract · ATP · Propose switch</div>
+      <div class="flow-label">Extract · ATP · Switch</div>
     </div>
     <div class="flow-arrow">⇄</div>
     <div class="flow-node">
@@ -379,8 +512,8 @@
     </div>
     <div class="flow-arrow">→</div>
     <div class="flow-node">
-      <div class="flow-box green">Planner Approval<div class="sub">pause · /approve</div></div>
-      <div class="flow-label">Sign-off + Audit Trail</div>
+      <div class="flow-box green">Response<div class="sub">answer + trace</div></div>
+      <div class="flow-label">Decision + Audit Trail</div>
     </div>
   </div>
 
@@ -392,7 +525,7 @@
       <div style="font-size:0.8rem;color:#94a3b8;margin-bottom:1rem;">
         Reads full message history after each step and decides what to do next.
         Uses <strong>structured output</strong> (JSON schema) to force deterministic routing.
-        Never calls tools — delegates everything.
+        Never calls tools itself; it only delegates.
       </div>
       <div class="tools">
         <div class="tool-pill">routes → sap_agent</div>
@@ -410,7 +543,7 @@
       <div class="tools">
         <div class="tool-pill">sap_extract()</div>
         <div class="tool-pill">calculate_atp()</div>
-        <div class="tool-pill">po_logistic_method_change() ⏸ approval</div>
+        <div class="tool-pill">po_logistic_method_change()</div>
       </div>
     </div>
     <div class="agent-card" style="border-color:rgba(139,92,246,0.3)">
@@ -460,7 +593,7 @@
         <td><span class="badge badge-green">✓</span></td>
         <td><span class="badge badge-amber">✗</span></td>
         <td><span class="badge badge-green">Permitted</span></td>
-        <td><span class="badge badge-blue">AIR Proposed → Planner Approves</span></td>
+        <td><span class="badge badge-blue">POs Switched to AIR</span></td>
       </tr>
       <tr>
         <td>PO late — air blocked</td>
@@ -493,9 +626,9 @@
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.2rem">
     <div class="card">
-      <h3>🧮 ATP Algorithm</h3>
+      <h3>ATP Algorithm</h3>
       <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:1rem;">
-        Mirrors SAP's native ATP calculation. Deterministic — no LLM involved in the math.
+        Mirrors SAP's native ATP calculation. Deterministic: no LLM in the math.
       </p>
       <div style="background:var(--surface2);border-radius:8px;padding:1rem;font-family:monospace;font-size:0.78rem;color:#94a3b8;line-height:1.7;">
         available_now = stock − Σ(open SOs)<br>
@@ -507,7 +640,7 @@
       </div>
     </div>
     <div class="card">
-      <h3>⚖️ Break-Even PO Selection</h3>
+      <h3>Break-Even PO Selection</h3>
       <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:1rem;">
         When switching to AIR, only the <em>minimum necessary</em> POs are updated.
         POs fully absorbed by committed sales orders are never touched.
@@ -522,11 +655,11 @@
       </div>
     </div>
     <div class="card" style="grid-column:1/-1">
-      <h3>📋 Policy-as-a-Document</h3>
+      <h3>Policy-as-a-Document</h3>
       <p style="font-size:0.82rem;color:#94a3b8;margin-bottom:0.8rem;">
         Air freight authorization rules live in a <strong>Markdown file</strong>, not in code.
         The Policy Agent reads it at runtime and reasons about the specific plant.
-        This means rules can be updated by a logistics manager — no code deploy required.
+        This means rules can be updated by a logistics manager without a code deploy.
       </p>
       <div style="display:flex;flex-wrap:wrap;gap:0.6rem;">
         <span class="badge badge-green">TW01 — Always permitted</span>
@@ -547,6 +680,807 @@
       a PO was switched, which policy clause authorized it, and what the stock position was at decision time.
     </p>
   </div>
+</section>
+
+<hr class="divider">
+
+
+<!-- TARGET WORKFLOW -->
+<section id="workflow">
+  <div class="section-label">Target Design</div>
+  <h2>The Full Planner Workflow</h2>
+  <p class="intro-text">
+    The prototype covers one path. This is the full triage it is designed to grow into, mapped to SAP
+    transactions and approval points. <strong>Green outlines show what the prototype runs today.</strong>
+    Node-level detail is in the <a href="atp_langgraph_v4.html" style="color:var(--accent2)">full workflow spec</a>.
+  </p>
+
+  <div class="wf-toolbar">
+    <div class="wf-tabs">
+      <button class="wf-tab active" id="wf-tab-step" onclick="wfView('step')">Waterfall</button>
+      <button class="wf-tab" id="wf-tab-par" onclick="wfView('par')">Parallel</button>
+    </div>
+    <label class="wf-check" id="wf-built-toggle"><input type="checkbox" checked onchange="document.getElementById('wf-fig').classList.toggle('hide-built',!this.checked)"> Show prototype coverage</label>
+    <div class="wf-legend">
+      <span><i style="border-color:#10B981;border-top-style:dashed"></i>feasible</span>
+      <span><i style="border-color:#9CA3AF;border-top-style:dashed"></i>fallback</span>
+      <span><i style="border-color:#EF4444;border-top-style:dashed"></i>block / escalate</span>
+      <span><i style="border-color:#0D9488;border-top-style:dashed"></i>early exit</span>
+      <span><i style="border-color:#B45309;border-top-style:dashed"></i>planner step</span>
+    </div>
+  </div>
+
+  <div class="wf-grid" id="wf-grid">
+    <div class="wf-fig" id="wf-fig">
+<svg class="wf-step" width="100%" viewBox="-40 0 730 1120" role="img">
+<title>ATP Multi-Agent LangGraph — Waterfall View</title>
+<defs>
+  <marker id="wfar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1.5L8 5L2 8.5" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+</defs>
+<rect x="14" y="10" width="470" height="202" rx="12" fill="var(--ag-bg)" stroke="var(--ag-border)" stroke-width="1" stroke-dasharray="5 3"/>
+<text class="sl-label" x="26" y="28" fill="var(--ink-mid)">① INTAKE AGENT</text>
+<text style="font-size:9px" x="26" y="40" fill="var(--ink-mid)">parse · classify · credit check</text>
+<g class="c-pre cat-intake">
+  <circle cx="155" cy="66" r="18"/>
+  <text class="nth" x="155" y="66" style="font-size:11px;font-weight:600">START</text>
+</g>
+<line x1="155" y1="84" x2="155" y2="97" class="a-main" marker-end="url(#wfar)"/>
+<g class="c-pre cat-intake">
+  <rect x="30" y="97" width="250" height="44" rx="8"/>
+  <text class="nth" x="155.0" y="115">check_credit_hold</text>
+  <text class="nts" x="155.0" y="130">VKM1 · VBUK.CMGST · pre-waterfall gate</text>
+</g>
+<path d="M280,119 L322,119" class="a-esc" marker-end="url(#wfar)"/>
+<text class="el el-e" x="283" y="113" style="font-size:7.5px">blocked</text>
+<g class="c-red cat-intake">
+  <rect x="322" y="104" width="144" height="34" rx="7"/>
+  <text class="nth" x="394.0" y="121" style="font-size:10.5px">Finance notify · HOLD</text>
+</g>
+<line x1="155" y1="141" x2="155" y2="154" class="a-main" marker-end="url(#wfar)"/>
+<g class="c-pre cat-intake">
+  <rect x="30" y="154" width="250" height="44" rx="8"/>
+  <text class="nth" x="155.0" y="172">parse_request</text>
+  <text class="nts" x="155.0" y="187">PULL_IN vs OVER_COMMIT · LLM tool_use · ≤3 retries</text>
+</g>
+<path d="M30,176 L14,176 L14,192 L30,192" class="a-no" marker-end="url(#wfar)"/>
+<text class="el el-n" x="14" y="207" style="font-size:8px" text-anchor="middle">retry</text>
+<line x1="155" y1="198" x2="155" y2="224" class="a-main" marker-end="url(#wfar)"/>
+<text class="el el-n" x="166" y="214" style="font-size:9px">request_df →</text>
+<rect x="14" y="224" width="470" height="280" rx="12" fill="var(--ag-bg)" stroke="var(--ag-border)" stroke-width="1" stroke-dasharray="5 3"/>
+<text class="sl-label" x="26" y="242" fill="var(--ink-mid)">② INVENTORY AGENT</text>
+<text style="font-size:9px" x="26" y="254" fill="var(--ink-mid)">CO9 · MMBE · shipping schedule — tools run in parallel (asyncio)</text>
+<g class="c-blue cat-inv">
+  <rect x="30" y="262" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="281">01 · check_dest_atp</text>
+  <text class="nts" x="175.0" y="298">CO9 WUNSCH_DATE=req_date · QM02/QMEL block check</text>
+</g>
+<path d="M30,286 L-6,286 L-6,1016 L30,1016" class="a-skip" marker-end="url(#wfar)"/>
+<text class="el el-s" x="-20" y="266" style="font-size:7.5px" text-anchor="middle">ATP</text>
+<text class="el el-s" x="-20" y="276" style="font-size:7.5px" text-anchor="middle">ok</text>
+<text class="el el-s" x="-20" y="286" style="font-size:7.5px" text-anchor="middle">AUTO</text>
+<text class="el el-s" x="-20" y="296" style="font-size:7.5px" text-anchor="middle">→</text>
+<line x1="175" y1="310" x2="175" y2="324" class="a-main" marker-end="url(#wfar)"/>
+<g class="c-pre cat-inv">
+  <rect x="30" y="324" width="290" height="44" rx="8"/>
+  <text class="nth" x="175.0" y="342">check_open_sea_order</text>
+  <text class="nts" x="175.0" y="357">OI-02 gate: air = mode upgrade only · EKPO · LIPS</text>
+</g>
+<path d="M320,346 L470,346 L470,516" class="a-no" marker-end="url(#wfar)"/>
+<text class="el el-n" x="326" y="340" style="font-size:8.5px">no sea → skip S02</text>
+<line x1="175" y1="368" x2="175" y2="382" class="a-main" marker-end="url(#wfar)"/>
+<g class="c-blue cat-inv">
+  <rect x="30" y="382" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="401">02 · check_shipping</text>
+  <text class="nts" x="175.0" y="418">Shipping schedule · 4 candidate routes · air cutoff check</text>
+</g>
+<path d="M320,406 L446,406 L446,516" class="a-no" marker-end="url(#wfar)"/>
+<text class="el el-n" x="326" y="400" style="font-size:8.5px">not feasible → S03</text>
+<line x1="175" y1="430" x2="175" y2="444" class="a-main" marker-end="url(#wfar)"/>
+<g class="c-amber cat-inv">
+  <rect x="30" y="444" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="463">collect_air_form  ⚡ HITL-1</text>
+  <text class="nts" x="175.0" y="480">INTERRUPT · cost center · approver · OI-05 risk</text>
+</g>
+<rect x="31" y="441" width="66" height="10" rx="3" fill="#FEF2F2" stroke="#DC2626" stroke-width="0.5"/>
+<text x="64" y="448.5" font-size="7" fill="#DC2626" text-anchor="middle">OI-05 · MED</text>
+<path d="M320,468 L446,468" class="a-no"/>
+<text class="el el-n" x="326" y="462" style="font-size:8.5px">abandoned → S03</text>
+<line x1="175" y1="504" x2="175" y2="516" class="a-main" marker-end="url(#wfar)"/>
+<text class="el el-n" x="186" y="513" style="font-size:9px">options_df →</text>
+<rect x="14" y="516" width="470" height="130" rx="12" fill="#EFF6FF" stroke="var(--accent-policy)" stroke-width="1.5" stroke-dasharray="5 3"/>
+<text class="sl-label" x="26" y="534" fill="var(--accent-policy)">③ POLICY AGENT</text>
+<text style="font-size:9px" x="26" y="546" fill="var(--accent-policy)">LLM reads atp_policy.txt · evaluates every option · BLOCK or FLAG before resolution</text>
+<g class="c-policy cat-policy">
+  <rect x="30" y="554" width="430" height="76" rx="8"/>
+  <text class="nth" x="245" y="578">evaluate_policy(options_df, policy.txt)</text>
+  <text class="nts" x="245" y="596">MFG-01 LT floor · AIR-01 cost-benefit · RWK-01 MOQ+T-type · INV-01 QI block</text>
+  <text class="nts" x="245" y="612">INV-03 LTB sell-through · ORD-01 credit · EDG-01 partial fill threshold</text>
+</g>
+<path d="M460,592 L490,592 L490,1030 L470,1030" class="a-esc" marker-end="url(#wfar)"/>
+<text class="el el-e" x="494" y="588" style="font-size:8px">BLOCK → compose</text>
+<line x1="245" y1="646" x2="245" y2="662" class="a-main" marker-end="url(#wfar)"/>
+<text class="el el-n" x="256" y="658" style="font-size:9px">PASS/FLAG options →</text>
+<rect x="14" y="662" width="470" height="290" rx="12" fill="var(--ag-bg)" stroke="var(--ag-border)" stroke-width="1" stroke-dasharray="5 3"/>
+<text class="sl-label" x="26" y="680" fill="var(--ink-mid)">④ RESOLUTION AGENT</text>
+<text style="font-size:9px" x="26" y="692" fill="var(--ink-mid)">WO expedite · rework · shortage — only options that passed policy</text>
+<g class="c-blue cat-res">
+  <rect x="30" y="700" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="719">03 · check_inventory</text>
+  <text class="nts" x="175.0" y="736">CO9 all plants · MMBE · split_qty = min(needed−covered, atp)</text>
+</g>
+<path d="M320,724 L360,724 L360,810 L500,810" class="a-yes" marker-end="url(#wfar)"/>
+<text class="el el-y" x="326" y="718" style="font-size:8.5px">STO ok</text>
+<line x1="175" y1="748" x2="175" y2="762" class="a-main" marker-end="url(#wfar)"/>
+<text class="el el-n" x="184" y="758" style="font-size:8.5px"></text>
+<g class="c-purple cat-res">
+  <rect x="30" y="762" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="781">04 · check_wo_expedite</text>
+  <text class="nts" x="175.0" y="798">CO3 · MES yield · output_qty = WO_qty × yield_rate</text>
+</g>
+<path d="M320,786 L376,786 L376,820 L500,820" class="a-yes" marker-end="url(#wfar)"/>
+<text class="el el-y" x="326" y="780" style="font-size:8.5px">yes / GATE</text>
+<line x1="175" y1="810" x2="175" y2="824" class="a-main" marker-end="url(#wfar)"/>
+<g class="c-purple cat-res">
+  <rect x="30" y="824" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="843">05 · check_rework</text>
+  <text class="nts" x="175.0" y="860">CS03 · MB52 · MOQ: MARC.MINBS / EINA.MINBM · PM GATE</text>
+</g>
+<path d="M320,848 L392,848 L392,834 L500,834" class="a-yes" marker-end="url(#wfar)"/>
+<text class="el el-y" x="326" y="842" style="font-size:8.5px">alt ok → PM</text>
+<line x1="175" y1="872" x2="175" y2="886" class="a-main" marker-end="url(#wfar)"/>
+<g class="c-red cat-res">
+  <rect x="30" y="886" width="290" height="48" rx="8"/>
+  <text class="nth" x="175.0" y="905">06 · check_shortage</text>
+  <text class="nts" x="175.0" y="922">CS03 BOM · SRM · root-cause → routed escalation</text>
+</g>
+<text class="el el-n" x="330" y="893" style="font-size:7.5px">IQC → QM</text>
+<text class="el el-n" x="330" y="902" style="font-size:7.5px">supplier → Sourcing</text>
+<text class="el el-n" x="330" y="911" style="font-size:7.5px">customs → Logistics</text>
+<text class="el el-n" x="330" y="920" style="font-size:7.5px">BOM → Eng/PLM</text>
+<path d="M320,928 L400,928 L400,994" class="a-esc" marker-end="url(#wfar)"/>
+<text class="el el-e" x="406" y="943" style="font-size:8px">ESCALATE</text>
+<g class="c-amber cat-res">
+  <rect x="500" y="790" width="148" height="68" rx="8"/>
+  <text class="nth" x="574" y="818">route_to</text>
+  <text class="nth" x="574" y="838">_approval  HITL-2</text>
+</g>
+<line x1="574" y1="858" x2="574" y2="874" class="a-yes" marker-end="url(#wfar)"/>
+<text class="el el-y" x="585" y="870" style="font-size:8px">approved</text>
+<g class="c-green cat-res">
+  <rect x="500" y="874" width="148" height="44" rx="8"/>
+  <text class="nth" x="574.0" y="892">execute_action</text>
+  <text class="nts" x="574.0" y="907">STO · air · rework</text>
+</g>
+<path d="M648,824 L670,824 L670,970 L458,970 L458,994" class="a-esc" marker-end="url(#wfar)"/>
+<text class="el el-e" x="652" y="816" style="font-size:7.5px">rejected</text>
+<path d="M574,918 L574,964 L440,964 L440,994" class="a-yes" marker-end="url(#wfar)"/>
+<line x1="245" y1="952" x2="245" y2="994" class="a-main" marker-end="url(#wfar)"/>
+<text class="el el-n" x="252" y="946" style="font-size:9px">ranked_actions →</text>
+<rect x="14" y="956" width="650" height="148" rx="12" fill="var(--ag-bg)" stroke="var(--ag-border)" stroke-width="1" stroke-dasharray="5 3"/>
+<text class="sl-label" x="26" y="974" fill="var(--ink-mid)">⑤ COMPOSE + HITL AGENT</text>
+<text style="font-size:9px" x="26" y="986" fill="var(--ink-mid)">stream → HITL-3 → execute → audit → END</text>
+<g class="c-teal cat-compose">
+  <rect x="30" y="994" width="440" height="44" rx="8"/>
+  <text class="nth" x="250.0" y="1012">compose_response</text>
+  <text class="nts" x="250.0" y="1027">stream · qty · commit_date · confidence · policy_flags · ranked ★</text>
+</g>
+<path d="M470,1016 L510,1016" class="a-hitl" marker-end="url(#wfar)"/>
+<g class="c-amber cat-compose">
+  <rect x="510" y="994" width="138" height="64" rx="8"/>
+  <text class="nth" x="579" y="1014">HITL-3 ⚡</text>
+  <text class="nts" x="579" y="1031">confirm / reject</text>
+  <text class="nts" x="579" y="1044">/ alternatives</text>
+</g>
+<path d="M579,998 L579,982 L300,982 L300,954" class="a-hitl" marker-end="url(#wfar)"/>
+<text class="el el-h" x="476" y="978" style="font-size:8px">reject / alternatives</text>
+<text class="el el-h" x="476" y="992" style="font-size:8px">→ re-enter Resolution</text>
+<line x1="180" y1="1038" x2="180" y2="1050" class="a-main" marker-end="url(#wfar)"/>
+<g class="c-pre cat-compose">
+  <rect x="30" y="1050" width="300" height="46" rx="8"/>
+  <text class="nth" x="180.0" y="1068">write_audit_log</text>
+  <text class="nts" x="180.0" y="1084">always · append-only · immutable · PostgreSQL</text>
+</g>
+<line x1="330" y1="1073" x2="350" y2="1073" class="a-main" marker-end="url(#wfar)"/>
+<g class="c-pre cat-compose">
+  <rect x="350" y="1058" width="80" height="30" rx="15"/>
+  <text class="nth" x="390.0" y="1073" style="font-size:11px;font-weight:600">END</text>
+</g>
+<g class="built-layer">
+<rect x="26" y="258" width="298" height="56" rx="10" fill="none" stroke="#059669" stroke-width="2.2"/>
+<rect x="38" y="307" width="120" height="14" rx="7" fill="#059669"/>
+<text x="98" y="314" font-size="7.8" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">BUILT · calculate_atp()</text>
+<rect x="26" y="320" width="298" height="52" rx="10" fill="none" stroke="#D97706" stroke-width="2.2" stroke-dasharray="5 3"/>
+<rect x="38" y="365" width="115" height="14" rx="7" fill="#D97706"/>
+<text x="96" y="372" font-size="7.8" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">PARTIAL · open-PO walk</text>
+<rect x="26" y="378" width="298" height="56" rx="10" fill="none" stroke="#059669" stroke-width="2.2"/>
+<rect x="38" y="427" width="129" height="14" rx="7" fill="#059669"/>
+<text x="102" y="434" font-size="7.8" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">BUILT · SEA→AIR PO switch</text>
+<rect x="26" y="550" width="438" height="84" rx="10" fill="none" stroke="#059669" stroke-width="2.2"/>
+<rect x="38" y="627" width="161" height="14" rx="7" fill="#059669"/>
+<text x="119" y="634" font-size="7.8" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">BUILT · Policy Agent (policy.md)</text>
+<rect x="26" y="990" width="448" height="52" rx="10" fill="none" stroke="#059669" stroke-width="2.2"/>
+<rect x="38" y="1035" width="115" height="14" rx="7" fill="#059669"/>
+<text x="96" y="1042" font-size="7.8" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">BUILT · answer + trace</text>
+<rect x="26" y="1046" width="308" height="54" rx="10" fill="none" stroke="#D97706" stroke-width="2.2" stroke-dasharray="5 3"/>
+<rect x="38" y="1093" width="120" height="14" rx="7" fill="#D97706"/>
+<text x="98" y="1100" font-size="7.8" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">PARTIAL · message trace</text>
+</g>
+</svg>
+<svg class="wf-par" width="100%" viewBox="0 0 580 740" role="img">
+<title>ATP Agent LangGraph — ALL/parallel mode</title>
+<defs>
+  <marker id="wfar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M2 1.5L8 5L2 8.5" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round"/>
+  </marker>
+</defs>
+
+<!-- ALL MODE header note -->
+<rect x="88" y="10" width="404" height="22" rx="5" fill="#EFF6FF" stroke="#3B82F6" stroke-width="0.5"/>
+<text x="290" y="22" font-size="10" fill="#1E40AF" font-weight="500" text-anchor="middle">asyncio.gather — all steps run simultaneously · Step 01 early-exit still applies</text>
+
+<!-- START -->
+<g class="c-pre cat-intake">
+  <circle cx="290" cy="48" r="18"/>
+  <text class="nth" x="290" y="48" style="font-size:11px;font-weight:600">START</text>
+</g>
+<line x1="290" y1="66" x2="290" y2="80" class="a-main" marker-end="url(#wfar2)"/>
+
+<!-- PRE-CHECKS -->
+<g class="c-pre cat-intake">
+  <rect x="120" y="80" width="340" height="48" rx="9"/>
+  <text class="nth" x="290" y="100">check_credit_hold · parse_request</text>
+  <text class="nts" x="290" y="117">VKM1 · classify PULL_IN vs OVER_COMMIT</text>
+</g>
+<line x1="290" y1="128" x2="290" y2="142" class="a-main" marker-end="url(#wfar2)"/>
+
+<!-- STEP 01 early exit check -->
+<g class="c-blue cat-inv">
+  <rect x="120" y="142" width="340" height="42" rx="9"/>
+  <text class="nth" x="290" y="163">01 · check_dest_atp + QMS block · early exit?</text>
+</g>
+<!-- early exit right -->
+<path d="M460,163 L510,163 L510,616 L462,616" class="a-skip" marker-end="url(#wfar2)"/>
+<text class="el" x="514" y="159" fill="#0D9488" style="font-size:8px">ATP ok</text>
+<text class="el" x="514" y="169" fill="#0D9488" style="font-size:8px">AUTO</text>
+<line x1="290" y1="184" x2="290" y2="198" class="a-main" marker-end="url(#wfar2)"/>
+
+<!-- GATHER label bar -->
+<rect x="64" y="198" width="452" height="20" rx="4" fill="#EFF6FF" stroke="#3B82F6" stroke-width="0.5"/>
+<text x="290" y="210" text-anchor="middle" font-size="10" fill="#1E40AF" font-weight="600">asyncio.gather — all steps simultaneously</text>
+
+<!-- fan-out lines -->
+<line x1="290" y1="218" x2="92" y2="218" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="290" y1="218" x2="488" y2="218" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="92" y1="218" x2="92" y2="234" class="a-main" marker-end="url(#wfar2)"/>
+<line x1="188" y1="218" x2="188" y2="234" class="a-main" marker-end="url(#wfar2)"/>
+<line x1="284" y1="218" x2="284" y2="234" class="a-main" marker-end="url(#wfar2)"/>
+<line x1="380" y1="218" x2="380" y2="234" class="a-main" marker-end="url(#wfar2)"/>
+<line x1="488" y1="218" x2="488" y2="234" class="a-main" marker-end="url(#wfar2)"/>
+
+<!-- 5 step boxes -->
+<g class="c-blue cat-inv">
+  <rect x="54" y="234" width="86" height="62" rx="7"/>
+  <text class="nth" x="97" y="254" style="font-size:11px">Step 02</text>
+  <text class="nts" x="97" y="271">Air</text>
+  <text class="nts" x="97" y="286">Sched.</text>
+</g>
+<g class="c-blue cat-inv">
+  <rect x="150" y="234" width="86" height="62" rx="7"/>
+  <text class="nth" x="193" y="254" style="font-size:11px">Step 03</text>
+  <text class="nts" x="193" y="271">Inventory</text>
+  <text class="nts" x="193" y="286">CO9+MMBE</text>
+</g>
+<g class="c-blue cat-inv">
+  <rect x="246" y="234" width="86" height="62" rx="7"/>
+  <text class="nth" x="289" y="254" style="font-size:11px">Step 04</text>
+  <text class="nts" x="289" y="271">WO expedite</text>
+  <text class="nts" x="289" y="286">yield check</text>
+</g>
+<g class="c-blue cat-inv">
+  <rect x="342" y="234" width="86" height="62" rx="7"/>
+  <text class="nth" x="385" y="254" style="font-size:11px">Step 05</text>
+  <text class="nts" x="385" y="271">Rework</text>
+  <text class="nts" x="385" y="286">MARC/EINA</text>
+</g>
+<g class="c-blue cat-inv">
+  <rect x="438" y="234" width="86" height="62" rx="7"/>
+  <text class="nth" x="481" y="254" style="font-size:11px">Step 06</text>
+  <text class="nts" x="481" y="271">Shortage</text>
+  <text class="nts" x="481" y="286">root cause</text>
+</g>
+
+<!-- ordering issue note -->
+
+
+<!-- fan-in lines -->
+<line x1="92" y1="310" x2="92" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="193" y1="310" x2="193" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="289" y1="310" x2="289" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="385" y1="310" x2="385" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="481" y1="310" x2="481" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="92" y1="332" x2="481" y2="332" stroke="#9CA3AF" stroke-width="0.9"/>
+<line x1="290" y1="332" x2="290" y2="346" class="a-main" marker-end="url(#wfar2)"/>
+
+<!-- options_df collector -->
+<g class="c-amber cat-res">
+  <rect x="100" y="346" width="380" height="52" rx="9"/>
+  <text class="nth" x="290" y="366">options_df collector</text>
+  <text class="nts" x="290" y="384">one row/step · WO rows use output_qty_forecast · split_qty validated</text>
+</g>
+<line x1="290" y1="398" x2="290" y2="412" class="a-main" marker-end="url(#wfar2)"/>
+
+<!-- rank_options -->
+<g class="c-amber cat-res">
+  <rect x="90" y="412" width="400" height="52" rx="9"/>
+  <text class="nth" x="290" y="432">rank_options(df)</text>
+  <text class="nts" x="290" y="450">cost_usd ASC · confidence DESC (yield-adjusted) · eta_at_dest ASC</text>
+</g>
+<line x1="290" y1="464" x2="290" y2="478" class="a-main" marker-end="url(#wfar2)"/>
+
+<!-- options_ranked_df preview -->
+<rect x="90" y="478" width="400" height="78" rx="7" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="0.75"/>
+<text x="108" y="494" font-size="9.5" fill="#374151" font-weight="600">options_ranked_df — qty + commit_date + confidence always shown</text>
+<rect x="98" y="500" width="384" height="16" rx="2" fill="#E5E7EB"/>
+<text x="112" y="511" font-size="8.5" fill="#374151">rank</text><text x="158" y="511" font-size="8.5" fill="#374151">step</text><text x="210" y="511" font-size="8.5" fill="#374151">qty</text><text x="260" y="511" font-size="8.5" fill="#374151">commit_date</text><text x="356" y="511" font-size="8.5" fill="#374151">cost_usd</text><text x="430" y="511" font-size="8.5" fill="#374151">action</text>
+<rect x="98" y="516" width="384" height="15" rx="1" fill="#DCFCE7" stroke="#86EFAC" stroke-width="0.4"/>
+<text x="112" y="526" font-size="8" fill="#14532D">1 ★</text><text x="158" y="526" font-size="8" fill="#14532D">03-STO</text><text x="210" y="526" font-size="8" fill="#14532D">100</text><text x="260" y="526" font-size="8" fill="#14532D">Jun 11</text><text x="356" y="526" font-size="8" fill="#14532D">1,200</text><text x="430" y="526" font-size="8" fill="#14532D">PROPOSE</text>
+<rect x="98" y="531" width="384" height="15" rx="1" fill="#FEF2F2"/>
+<text x="112" y="541" font-size="8" fill="#7F1D1D">—</text><text x="158" y="541" font-size="8" fill="#7F1D1D">06-ESC</text><text x="210" y="541" font-size="8" fill="#7F1D1D">0</text><text x="260" y="541" font-size="8" fill="#7F1D1D">null</text><text x="356" y="541" font-size="8" fill="#7F1D1D">—</text><text x="430" y="541" font-size="8" fill="#7F1D1D">ESCALATE</text>
+<text x="108" y="556" font-size="8" fill="#9CA3AF">* WO rows: qty = output_qty_forecast (WO_qty × yield_rate)  † confidence yield-adjusted</text>
+<line x1="290" y1="556" x2="290" y2="570" class="a-main" marker-end="url(#wfar2)"/>
+
+<!-- compose_response -->
+<g class="c-teal cat-compose">
+  <rect x="100" y="570" width="380" height="52" rx="9"/>
+  <text class="nth" x="290" y="590">compose_response</text>
+  <text class="nts" x="290" y="608">P1 ★ recommended · P2 optional · ESCALATE routed by root-cause</text>
+</g>
+<line x1="290" y1="622" x2="290" y2="636" class="a-main" marker-end="url(#wfar2)"/>
+
+<!-- audit + END -->
+<g class="c-pre cat-compose">
+  <rect x="150" y="636" width="280" height="42" rx="9"/>
+  <text class="nth" x="290" y="658">write_audit_log → END</text>
+</g>
+
+</svg>
+    </div>
+    <aside class="wf-notes">
+      <div class="card wf-note-step">
+        <h3>Waterfall: cheapest fix first</h3>
+        <ul>
+          <li>Credit hold is checked before anything else.</li>
+          <li>Stock already at the destination: answer right away.</li>
+          <li>Air only upgrades an existing sea order. It is not a source of stock.</li>
+          <li>Other plants: duty-paid (完稅廠) plants first, then lowest freight.</li>
+          <li>Production, rework and shortage are escalation steps, each with a named owner.</li>
+          <li>A planner approves every action.</li>
+        </ul>
+      </div>
+      <div class="card wf-note-par">
+        <h3>Parallel: check everything, then rank</h3>
+        <ul>
+          <li>Destination stock is still checked first.</li>
+          <li>All other sources are queried at the same time.</li>
+          <li>Options are ranked by cost, then confidence, then arrival date.</li>
+          <li>The planner picks one option or a combination.</li>
+        </ul>
+        <p style="font-size:.78rem;color:var(--muted);margin-top:.8rem">Design only. The prototype runs one step at a time.</p>
+      </div>
+    </aside>
+  </div>
+
+  <h3 style="margin-top:2.5rem;font-size:1rem;font-weight:700;color:#f1f5f9;">Waterfall or parallel? The design keeps both.</h3>
+  <div class="mode-compare">
+    <div class="card">
+      <h3>Waterfall</h3>
+      <p>Steps run one at a time in a fixed order and stop at the first option that meets the date. Predictable, deterministic and easy to audit.</p>
+    </div>
+    <div class="card">
+      <h3>Parallel</h3>
+      <p>All sources are checked at once and the options are ranked for the planner. Often closer to how planners gather information in practice, though not always necessary.</p>
+    </div>
+  </div>
+  <p class="oq"><b>Open question:</b> when each mode should be used in real operations is not decided yet. That call needs input from senior planners, so both modes stay in the design until it is validated.</p>
+</section>
+
+<hr class="divider">
+
+<!-- DEMO -->
+<section id="demo">
+  <div class="section-label">Walkthrough</div>
+  <h2>Demo Scenarios</h2>
+  <p class="intro-text">Six scenarios showing how the full design would look to a planner.</p>
+  <div class="honesty">
+    <div style="font-size:1.1rem">ℹ️</div>
+    <p><strong>Scripted with mock data, not live agent output.</strong> Only scenario 1 (air freight) overlaps with the working prototype.</p>
+  </div>
+  <table>
+    <thead><tr><th>Scenario</th><th>Path</th><th>In prototype</th></tr></thead>
+    <tbody>
+      <tr><td>1 · Air freight, tonight's cutoff</td><td>Switch sea to air, cost approval</td><td><span class="status-pill st-partial">PARTIAL</span></td></tr>
+      <tr><td>2 · Transfer + quality-hold stock</td><td>Cross-plant transfer, explain blocked stock</td><td><span class="status-pill st-design">DESIGN</span></td></tr>
+      <tr><td>3 · Compare all options</td><td>Parallel mode, ranked options</td><td><span class="status-pill st-design">DESIGN</span></td></tr>
+      <tr><td>4 · System alert: ATP slip</td><td>Triggered by SAP, no request needed</td><td><span class="status-pill st-design">DESIGN</span></td></tr>
+      <tr><td>5 · Work order + overtime</td><td>Yield-adjusted output, manager approval</td><td><span class="status-pill st-design">DESIGN</span></td></tr>
+      <tr><td>6 · Component shortage</td><td>Routed to the team that owns the cause</td><td><span class="status-pill st-design">DESIGN</span></td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:.8rem;color:var(--muted);margin-top:1rem">Open full screen: <a href="demo.html" style="color:var(--accent2)">demo.html</a></p>
+  <iframe class="demo-frame" style="margin-top:.6rem" title="ATP demo scenarios (scripted)" srcdoc="&lt;!DOCTYPE html&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;UTF-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1.0&quot;&gt;
+&lt;title&gt;ATP Fulfillment Agent — Demo Scenario Player&lt;/title&gt;
+&lt;style&gt;
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,&#x27;Segoe UI&#x27;,sans-serif;font-size:13px;background:#f5f5f0;padding:20px;color:#1a1a18}
+h1{font-size:16px;font-weight:500;color:#444441;margin-bottom:16px}
+.wrap{display:grid;grid-template-columns:220px 1fr;gap:0;border:0.5px solid #d4d2c8;border-radius:12px;overflow:hidden;min-height:520px;background:#fff;max-width:900px}
+.sidebar{background:#f5f5f0;border-right:0.5px solid #d4d2c8;padding:12px}
+.sb-title{font-size:10px;font-weight:500;color:#888780;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.sc-btn{width:100%;text-align:left;padding:8px 10px;border-radius:8px;border:0.5px solid #d4d2c8;background:#fff;cursor:pointer;margin-bottom:5px;font-size:11px;line-height:1.3;transition:background .15s}
+.sc-btn:hover{background:#eeeee8}
+.sc-btn.active{border-color:#85B7EB;background:#E6F1FB}
+.sc-btn .tag{display:inline-block;font-size:8px;font-weight:500;padding:1px 4px;border-radius:3px;margin-bottom:2px;color:#fff}
+.tag-s{background:#534AB7}.tag-q{background:#185FA5}.tag-sys{background:#854F0B}.tag-gate{background:#A32D2D}.tag-step{background:#085041}
+.sc-btn .sc-title{font-weight:500;color:#1a1a18;display:block}
+.sc-btn .sc-sub{font-size:9px;color:#5F5E5A}
+.sc-btn.active .sc-title{color:#0C447C}
+.sc-btn.active .sc-sub{color:#185FA5}
+.chat-pane{display:flex;flex-direction:column;background:#fff}
+.chat-topbar{padding:8px 12px;border-bottom:0.5px solid #d4d2c8;display:flex;align-items:center;gap:6px;background:#f5f5f0}
+.dot{width:7px;height:7px;border-radius:50%;background:#3B6D11;flex-shrink:0}
+.dot.busy{background:#854F0B}
+.tb-title{font-size:11px;font-weight:500;color:#1a1a18}
+.tb-sub{font-size:9px;color:#5F5E5A;margin-left:auto}
+.replay-btn{font-size:9px;padding:3px 8px;border-radius:5px;border:0.5px solid #b4b2a9;background:transparent;cursor:pointer;color:#5F5E5A}
+.replay-btn:hover{background:#eeeee8}
+.chat-body{flex:1;padding:10px 12px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;max-height:460px}
+.user-msg{background:#E6F1FB;color:#0C447C;border-radius:10px 10px 2px 10px;padding:7px 10px;font-size:10px;align-self:flex-end;max-width:85%;line-height:1.4}
+.sys-msg{background:#FAEEDA;color:#633806;border-radius:6px;padding:5px 9px;font-size:9px;font-style:italic;border:0.5px solid #EF9F27}
+.step-hdr{font-size:8px;font-weight:500;letter-spacing:.07em;color:#888780;text-transform:uppercase;padding:3px 0}
+.tool-card{border:0.5px solid #d4d2c8;border-radius:5px;padding:4px 7px;background:#f5f5f0;margin-bottom:2px;opacity:0;transform:translateY(4px);transition:opacity .25s,transform .25s}
+.tool-card.show{opacity:1;transform:translateY(0)}
+.tc-top{display:flex;align-items:center;gap:4px}
+.tc-fn{font-family:&#x27;SF Mono&#x27;,Menlo,monospace;font-size:9px;color:#1a1a18;font-weight:500}
+.tc-badge{font-size:7px;padding:1px 4px;border-radius:3px;background:#d4d2c8;color:#5F5E5A}
+.tc-ok{margin-left:auto;font-size:10px;color:#3B6D11}
+.tc-warn{margin-left:auto;font-size:9px;color:#854F0B}
+.tc-result{font-size:9px;color:#5F5E5A;margin-top:1px;line-height:1.3}
+.tc-result strong{color:#1a1a18}
+.always-strip{display:flex;gap:10px;background:#f5f5f0;border-radius:5px;padding:5px 8px;align-items:center;border:0.5px solid #d4d2c8}
+.as-item label{color:#888780;font-size:8px;display:block}
+.as-item span{font-weight:500;color:#1a1a18;font-size:10px}
+.as-item span.good{color:#27500A}
+.conf-mini{display:flex;align-items:center;gap:3px}
+.conf-bar{width:36px;height:3px;background:#d4d2c8;border-radius:2px}
+.conf-fill{height:100%;border-radius:2px}
+.opt-card{border-radius:6px;padding:6px 9px;margin-bottom:4px}
+.opt-card.p1{background:#EAF3DE;border:0.5px solid #97C459}
+.opt-card.p2{background:#E6F1FB;border:0.5px solid #85B7EB}
+.opt-card.p3{background:#f5f5f0;border:0.5px solid #d4d2c8}
+.opt-card.esc{background:#FCEBEB;border:0.5px solid #F09595}
+.opt-top{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.rb{font-size:7px;font-weight:500;padding:2px 5px;border-radius:3px;color:#fff}
+.rb-p1{background:#c05000}.rb-p2{background:#185FA5}.rb-p3{background:#534AB7}.rb-esc{background:#A32D2D}
+.opt-title{font-size:10px;font-weight:500;color:#1a1a18;flex:1}
+.opt-meta{display:flex;gap:8px;font-size:8px;color:#5F5E5A;margin-bottom:3px;flex-wrap:wrap}
+.opt-meta strong{color:#1a1a18}
+.opt-note{font-size:8px;color:#5F5E5A;margin-bottom:4px}
+.opt-note.combine{color:#185FA5}
+.opt-btns{display:flex;gap:4px}
+.obtn{font-size:8px;font-weight:500;padding:3px 7px;border-radius:4px;cursor:pointer;border:0.5px solid;transition:opacity .15s}
+.obtn:hover{opacity:.8}
+.obtn.approve{background:#EAF3DE;color:#27500A;border-color:#97C459}
+.obtn.gate{background:#FAEEDA;color:#633806;border-color:#EF9F27}
+.obtn.sec{background:transparent;color:#5F5E5A;border-color:#b4b2a9}
+.obtn.esc{background:transparent;color:#A32D2D;border-color:#F09595}
+.advisory{background:#FAEEDA;border-left:3px solid #EF9F27;border-radius:0 4px 4px 0;padding:4px 7px;margin:3px 0;border-top:0.5px solid #EF9F27;border-right:0.5px solid #EF9F27;border-bottom:0.5px solid #EF9F27}
+.adv-t{font-size:8px;font-weight:500;color:#633806}
+.adv-b{font-size:8px;color:#633806;margin-top:1px}
+.rec-strip{background:#f5f5f0;border-left:3px solid #3B6D11;border-radius:0 4px 4px 0;padding:4px 7px;border-top:0.5px solid #d4d2c8;border-right:0.5px solid #d4d2c8;border-bottom:0.5px solid #d4d2c8}
+.rec-t{font-size:9px;font-weight:500;color:#1a1a18}
+.rec-s{font-size:8px;color:#5F5E5A;margin-top:1px}
+.action-row{display:flex;gap:4px;margin-top:4px}
+.main-btn{flex:1;text-align:center;padding:5px;border-radius:5px;font-size:9px;font-weight:500;cursor:pointer;border:0.5px solid;transition:opacity .15s}
+.main-btn:hover{opacity:.8}
+.main-btn.approve{background:#EAF3DE;color:#27500A;border-color:#97C459}
+.main-btn.add{background:#E6F1FB;color:#0C447C;border-color:#85B7EB}
+.main-btn.gate{background:#FAEEDA;color:#633806;border-color:#EF9F27}
+.main-btn.esc-btn{background:transparent;color:#A32D2D;border-color:#F09595}
+.muted-line{font-size:8px;color:#888780;padding:1px 0}
+.tech-note{margin-top:10px;padding-top:8px;border-top:0.5px solid #d4d2c8;font-size:8px;color:#888780;line-height:1.5}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;h1&gt;ATP Fulfillment Agent: demo scenarios &lt;span style=&quot;font-size:11px;color:#854F0B;background:#FAEEDA;border:0.5px solid #EF9F27;border-radius:4px;padding:2px 6px;margin-left:6px&quot;&gt;Scripted · mock data&lt;/span&gt;&lt;/h1&gt;
+&lt;div class=&quot;wrap&quot;&gt;
+  &lt;div class=&quot;sidebar&quot;&gt;
+    &lt;div class=&quot;sb-title&quot;&gt;Demo scenarios&lt;/div&gt;
+    &lt;div class=&quot;sc-btn active&quot; onclick=&quot;loadScenario(0)&quot;&gt;
+      &lt;span class=&quot;tag tag-s&quot;&gt;STEP · 02&lt;/span&gt;
+      &lt;span class=&quot;sc-title&quot;&gt;Air freight — tonight cutoff&lt;/span&gt;
+      &lt;span class=&quot;sc-sub&quot;&gt;PO-88321 · Jun 20→10 · 100 pcs&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;sc-btn&quot; onclick=&quot;loadScenario(1)&quot;&gt;
+      &lt;span class=&quot;tag tag-step&quot;&gt;STEP · 03&lt;/span&gt;
+      &lt;span class=&quot;sc-title&quot;&gt;STO + QI advisory&lt;/span&gt;
+      &lt;span class=&quot;sc-sub&quot;&gt;PO-88321 · WH03 stock gap&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;sc-btn&quot; onclick=&quot;loadScenario(2)&quot;&gt;
+      &lt;span class=&quot;tag tag-q&quot;&gt;ALL mode&lt;/span&gt;
+      &lt;span class=&quot;sc-title&quot;&gt;Query-all · P1+P2 combo&lt;/span&gt;
+      &lt;span class=&quot;sc-sub&quot;&gt;PO-88321 · 3 ranked options&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;sc-btn&quot; onclick=&quot;loadScenario(3)&quot;&gt;
+      &lt;span class=&quot;tag tag-sys&quot;&gt;SYSTEM&lt;/span&gt;
+      &lt;span class=&quot;sc-title&quot;&gt;System trigger · ATP slip&lt;/span&gt;
+      &lt;span class=&quot;sc-sub&quot;&gt;PO-45221 · Jun 25 vs Jun 18&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;sc-btn&quot; onclick=&quot;loadScenario(4)&quot;&gt;
+      &lt;span class=&quot;tag tag-gate&quot;&gt;GATE&lt;/span&gt;
+      &lt;span class=&quot;sc-title&quot;&gt;WO expedite · OT gate&lt;/span&gt;
+      &lt;span class=&quot;sc-sub&quot;&gt;PO-77341 · WO-3812 bottleneck&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;sc-btn&quot; onclick=&quot;loadScenario(5)&quot;&gt;
+      &lt;span class=&quot;tag tag-sys&quot;&gt;ESC&lt;/span&gt;
+      &lt;span class=&quot;sc-title&quot;&gt;Full escalation · BOM shortage&lt;/span&gt;
+      &lt;span class=&quot;sc-sub&quot;&gt;PO-99102 · CPU-A421 short&lt;/span&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;tech-note&quot;&gt;
+      &lt;strong&gt;About&lt;/strong&gt;&lt;br&gt;
+      Scripted playback of the&lt;br&gt;target design, mock data.&lt;br&gt;
+      Not live agent output.
+    &lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;chat-pane&quot;&gt;
+    &lt;div class=&quot;chat-topbar&quot;&gt;
+      &lt;div class=&quot;dot&quot; id=&quot;status-dot&quot;&gt;&lt;/div&gt;
+      &lt;div class=&quot;tb-title&quot; id=&quot;tb-title&quot;&gt;ATP Fulfillment Agent&lt;/div&gt;
+      &lt;div class=&quot;tb-sub&quot; id=&quot;tb-sub&quot;&gt;Ready&lt;/div&gt;
+      &lt;button class=&quot;replay-btn&quot; onclick=&quot;replayScenario()&quot;&gt;Replay&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;chat-body&quot; id=&quot;chat-body&quot;&gt;&lt;/div&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+&lt;script&gt;
+const SCENARIOS = [
+  {
+    title:&#x27;ATP Fulfillment Agent&#x27;, sub:&#x27;Step 02 resolved · PROPOSE&#x27;,
+    trigger:&#x27;human&#x27;, input:&#x27;Can we pull in PO-88321 from Jun 20 → Jun 10? 100 units, GB300-NVL72.&#x27;,
+    stepHdr:&#x27;Checking step 02 — faster shipping?&#x27;,
+    tools:[
+      {fn:&#x27;get_shipping_schedule(WH01)&#x27;, badge:&#x27;Shipping Sched.&#x27;, ok:true, result:&#x27;Sea: Jun 20 | Air: +2d, cutoff Jun 10 23:59 ✓&#x27;},
+      {fn:&#x27;get_air_cutoff(WH01→US)&#x27;, badge:&#x27;TMS/3PL&#x27;, ok:true, result:&#x27;Air available — cutoff tonight 23:59 | Est. cost $3,800&#x27;},
+    ],
+    always:{qty:&#x27;100 pcs&#x27;, date:&#x27;Jun 10&#x27;, conf:0.74, path:&#x27;02 · Air&#x27;},
+    result:{
+      opts:[{cls:&#x27;p1&#x27;,rb:&#x27;rb-p1&#x27;,rbLabel:&#x27;FASTEST&#x27;,title:&#x27;Air freight — direct ship tonight&#x27;,meta:{date:&#x27;Jun 10&#x27;,qty:&#x27;100 pcs&#x27;,cost:&#x27;$3,800&#x27;,action:&#x27;GATE&#x27;},note:&#x27;Cutoff 23:59 tonight. Needs manager approval above $3,000 threshold.&#x27;,btns:[{cls:&#x27;gate&#x27;,label:&#x27;Request approval&#x27;},{cls:&#x27;sec&#x27;,label:&#x27;Skip&#x27;}]}],
+      muted:[&#x27;Cross-plant STO would arrive Jun 13 — misses requested date.&#x27;],
+      adv:null,
+      rec:{text:&#x27;Air is the only path that meets Jun 10.&#x27;,sub:&#x27;Qty: 100 pcs · Commit: Jun 10 · Cost: $3,800 · Conf: 74%&#x27;},
+      actions:[{cls:&#x27;gate&#x27;,label:&#x27;Request approval&#x27;},{cls:&#x27;sec&#x27;,label:&#x27;Check STO anyway&#x27;}],
+    }
+  },
+  {
+    title:&#x27;ATP Fulfillment Agent&#x27;, sub:&#x27;Step 03 resolved · PROPOSE + Advisory&#x27;,
+    trigger:&#x27;human&#x27;, input:&#x27;Can we pull in PO-88321 from Jun 20 → Jun 10? 100 units, GB300-NVL72.&#x27;,
+    stepHdr:&#x27;Checking step 03 — cross-plant inventory?&#x27;,
+    tools:[
+      {fn:&#x27;get_atp_status(PO-88321)&#x27;, badge:&#x27;SAP CO9&#x27;, ok:true, result:&#x27;Free ATP: 30u | Shortfall: 70 | Replenishment: Jun 12&#x27;},
+      {fn:&#x27;get_stock_by_plant(GB300-NVL72, all)&#x27;, badge:&#x27;SAP MD04&#x27;, ok:true, result:&#x27;完稅廠 WH02: 120u ✓ | WH03: 0 (CO9) | WH04: 45u&#x27;},
+      {fn:&#x27;check_tax_status(WH02)&#x27;, badge:&#x27;SAP&#x27;, ok:true, result:&#x27;完稅廠 — duty cleared ✓&#x27;},
+      {fn:&#x27;get_std_stock(WH03)&#x27;, badge:&#x27;SAP MB52&#x27;, warn:true, result:&#x27;MMBE: unrestricted 0 | in_quality 1,262 | blocked 0&#x27;},
+    ],
+    always:{qty:&#x27;100 pcs&#x27;, date:&#x27;Jun 11&#x27;, conf:0.82, path:&#x27;03 · STO&#x27;},
+    result:{
+      opts:[{cls:&#x27;p1&#x27;,rb:&#x27;rb-p1&#x27;,rbLabel:&#x27;P1 FASTEST&#x27;,title:&#x27;STO from 完稅廠 WH02&#x27;,meta:{date:&#x27;Jun 11&#x27;,qty:&#x27;100 pcs&#x27;,cost:&#x27;$1,200&#x27;,action:&#x27;PROPOSE&#x27;},note:&#x27;120u available, duty cleared, no additional tax. Est. ship Jun 11 via air.&#x27;,btns:[{cls:&#x27;approve&#x27;,label:&#x27;Approve STO&#x27;},{cls:&#x27;sec&#x27;,label:&#x27;Reject&#x27;}]}],
+      muted:[&#x27;WH04: 45 units — splittable but only partial coverage.&#x27;],
+      adv:{title:&#x27;⚠ WH03 stock gap — 1,262 units (MMBE) but CO9 ATP = 0&#x27;,body:&#x27;All stock under Quality Inspection (open lot). Cannot ship until usage decision (UD) made.&#x27;,action:&#x27;→ Contact QM Manager · QA32 for inspection lot status and UD date&#x27;},
+      rec:{text:&#x27;STO from WH02 covers full 100 pcs.&#x27;,sub:&#x27;Qty: 100 pcs · Commit: Jun 11 · Cost: $1,200 · Conf: 82%&#x27;},
+      actions:[{cls:&#x27;approve&#x27;,label:&#x27;Approve STO WH02&#x27;},{cls:&#x27;sec&#x27;,label:&#x27;Add WH04 split&#x27;}],
+    }
+  },
+  {
+    title:&#x27;ATP Fulfillment Agent&#x27;, sub:&#x27;Query-all complete · 3 options found&#x27;,
+    trigger:&#x27;human&#x27;, input:&#x27;Can we pull in PO-88321 from Jun 20 → Jun 10? 100 units, GB300-NVL72. Query all paths.&#x27;,
+    stepHdr:&#x27;Querying all paths simultaneously...&#x27;,
+    tools:[
+      {fn:&#x27;get_atp_status(PO-88321)&#x27;, badge:&#x27;SAP CO9&#x27;, ok:true, result:&#x27;Free ATP: 30u | Shortfall: 70&#x27;},
+      {fn:&#x27;get_shipping_schedule(WH02)&#x27;, badge:&#x27;Shipping Sched.&#x27;, ok:true, result:&#x27;Air cutoff Jun 10 23:59 ✓ | Est. $3,800&#x27;},
+      {fn:&#x27;get_stock_by_plant(GB300-NVL72, all)&#x27;, badge:&#x27;SAP MD04&#x27;, ok:true, result:&#x27;完稅廠 WH02: 120u ✓ | WH03: 0 | WH04: 45u&#x27;},
+      {fn:&#x27;check_container_status(PO-7731)&#x27;, badge:&#x27;Logistics&#x27;, ok:true, result:&#x27;WH04 pre-container, not loaded — splittable ✓&#x27;},
+      {fn:&#x27;get_bom_alternatives(GB300-NVL72)&#x27;, badge:&#x27;SAP CS03&#x27;, ok:true, result:&#x27;GB300-NVL71: similar spec, 200u @ WH01&#x27;},
+      {fn:&#x27;get_wo_status(WO-4421)&#x27;, badge:&#x27;MES/CO3&#x27;, warn:true, result:&#x27;Stage SMT 4/8 | Exit Jun 13 | Expedite: needs OT approval&#x27;},
+    ],
+    always:{qty:&#x27;100 pcs&#x27;, date:&#x27;Jun 11&#x27;, conf:0.82, path:&#x27;03 · STO&#x27;},
+    result:{
+      opts:[
+        {cls:&#x27;p1&#x27;,rb:&#x27;rb-p1&#x27;,rbLabel:&#x27;P1 FASTEST&#x27;,title:&#x27;STO from 完稅廠 WH02&#x27;,meta:{date:&#x27;Jun 11&#x27;,qty:&#x27;100 pcs&#x27;,cost:&#x27;$1,200&#x27;,action:&#x27;PROPOSE&#x27;},note:&#x27;120u available, duty cleared.&#x27;,btns:[{cls:&#x27;approve&#x27;,label:&#x27;Approve STO&#x27;},{cls:&#x27;sec&#x27;,label:&#x27;Skip&#x27;}]},
+        {cls:&#x27;p2&#x27;,rb:&#x27;rb-p2&#x27;,rbLabel:&#x27;P2&#x27;,title:&#x27;Split PO-7731 from WH04&#x27;,meta:{date:&#x27;Jun 11&#x27;,qty:&#x27;45 pcs&#x27;,cost:&#x27;$800&#x27;,action:&#x27;PROPOSE&#x27;},note:&#x27;45u not loaded — redirect air. Combine with P1 for full 100 pcs.&#x27;,btns:[{cls:&#x27;approve&#x27;,label:&#x27;Add P2 split&#x27;},{cls:&#x27;sec&#x27;,label:&#x27;Skip&#x27;}]},
+        {cls:&#x27;p3&#x27;,rb:&#x27;rb-p3&#x27;,rbLabel:&#x27;P3&#x27;,title:&#x27;Substitute GB300-NVL71 (WH01)&#x27;,meta:{date:&#x27;Jun 12&#x27;,qty:&#x27;100 pcs&#x27;,cost:&#x27;$0&#x27;,action:&#x27;GATE · PM&#x27;},note:&#x27;Spec compatible, 200u, above MOQ. Needs PM confirmation. Contingency.&#x27;,btns:[{cls:&#x27;gate&#x27;,label:&#x27;Request PM&#x27;},{cls:&#x27;sec&#x27;,label:&#x27;Skip&#x27;}]},
+      ],
+      muted:[&#x27;WO expedite: needs OT approval (+cost). Not recommended.&#x27;],
+      adv:null,
+      rec:{text:&#x27;Recommend P1 + partial P2 to cover 100 units.&#x27;,sub:&#x27;Qty: 100 pcs · Commit: Jun 11 · Est. total: $2,000 · Conf: 82%&#x27;},
+      actions:[{cls:&#x27;approve&#x27;,label:&#x27;Approve P1 (STO WH02)&#x27;},{cls:&#x27;add&#x27;,label:&#x27;Add P2 split&#x27;}],
+    }
+  },
+  {
+    title:&#x27;ATP Fulfillment Agent&#x27;, sub:&#x27;System trigger · Step 03 resolved&#x27;,
+    trigger:&#x27;system&#x27;, input:&#x27;[System] PO-45221 overcommitted — ATP date slipped to Jun 25 vs commit Jun 18.&#x27;,
+    stepHdr:&#x27;Step 02 — faster shipping?&#x27;,
+    tools:[
+      {fn:&#x27;get_atp_status(PO-45221)&#x27;, badge:&#x27;SAP CO9&#x27;, ok:true, result:&#x27;ATP slipped — WO-3812 delayed at AOI | New ATP: Jun 22&#x27;},
+      {fn:&#x27;get_shipping_schedule(WH01)&#x27;, badge:&#x27;Shipping Sched.&#x27;, ok:true, result:&#x27;Current sea Jun 25 | Air +2d = Jun 20 — still misses Jun 18&#x27;},
+      {fn:&#x27;get_stock_by_plant(pn)&#x27;, badge:&#x27;SAP MD04&#x27;, ok:true, result:&#x27;完稅廠 WH02: 60u ✓ | WH03: 0&#x27;},
+    ],
+    always:{qty:&#x27;100 pcs&#x27;, date:&#x27;Jun 17&#x27;, conf:0.81, path:&#x27;03 · STO+Air&#x27;},
+    result:{
+      opts:[
+        {cls:&#x27;p1&#x27;,rb:&#x27;rb-p1&#x27;,rbLabel:&#x27;OPTION A&#x27;,title:&#x27;STO WH02→WH01 + air&#x27;,meta:{date:&#x27;Jun 17&#x27;,qty:&#x27;60 pcs&#x27;,cost:&#x27;$2,500&#x27;,action:&#x27;PROPOSE&#x27;},note:&#x27;60u from 完稅廠 WH02 via air — arrive Jun 17 (1-day buffer).&#x27;,btns:[{cls:&#x27;approve&#x27;,label:&#x27;Approve STO+air&#x27;},{cls:&#x27;sec&#x27;,label:&#x27;Skip&#x27;}]},
+        {cls:&#x27;p2&#x27;,rb:&#x27;rb-p2&#x27;,rbLabel:&#x27;OPTION B&#x27;,title:&#x27;Notify customer — Jun 22&#x27;,meta:{date:&#x27;Jun 22&#x27;,qty:&#x27;100 pcs&#x27;,cost:&#x27;$0&#x27;,action:&#x27;AUTO&#x27;},note:&#x27;Accept slip. WO exits Jun 20, sea ships Jun 22.&#x27;,btns:[{cls:&#x27;approve&#x27;,label:&#x27;Accept Jun 22&#x27;},{cls:&#x27;sec&#x27;,label:&#x27;Skip&#x27;}]},
+      ],
+      muted:[&#x27;WO-3812 delayed at AOI bottleneck — exit revised Jun 20 (+5d). Expediting requires OT.&#x27;],
+      adv:{title:&#x27;Root cause: WO-3812 delayed at AOI&#x27;,body:&#x27;Exit revised from Jun 15 to Jun 20 (+5 days). 40 units from WH02 available as partial bridge.&#x27;,action:&#x27;→ MFG team to confirm AOI bottleneck ETA&#x27;},
+      rec:{text:&#x27;Option A covers 60 pcs by Jun 17. Notify customer of 40-pcs delta.&#x27;,sub:&#x27;Qty partial: 60 pcs · Commit: Jun 17 · Cost: $2,500 · Conf: 81%&#x27;},
+      actions:[{cls:&#x27;approve&#x27;,label:&#x27;Approve Option A&#x27;},{cls:&#x27;add&#x27;,label:&#x27;Accept Option B&#x27;}],
+    }
+  },
+  {
+    title:&#x27;ATP Fulfillment Agent&#x27;, sub:&#x27;Step 05 · WO expedite · GATE&#x27;,
+    trigger:&#x27;human&#x27;, input:&#x27;Pull in PO-77341 from Jun 28 → Jun 20? 80 units, GB500-NVL10.&#x27;,
+    stepHdr:&#x27;Checking step 05 — WO expedite?&#x27;,
+    tools:[
+      {fn:&#x27;get_atp_status(PO-77341)&#x27;, badge:&#x27;SAP CO9&#x27;, ok:true, result:&#x27;ATP: 0 units | WO-3820 in progress&#x27;},
+      {fn:&#x27;get_wo_status(WO-3820)&#x27;, badge:&#x27;MES/CO3&#x27;, warn:true, result:&#x27;Stage AOI 5/8 | Exit: Jun 24 | Expedite needs OT + line re-priority&#x27;},
+      {fn:&#x27;get_stock_by_plant(GB500-NVL10)&#x27;, badge:&#x27;SAP MD04&#x27;, ok:true, result:&#x27;All plants: 0 available — WO only source&#x27;},
+      {fn:&#x27;request_expedite(WO-3820)&#x27;, badge:&#x27;MFG Portal&#x27;, warn:true, result:&#x27;Overtime required — routed to MFG manager GATE&#x27;},
+    ],
+    always:{qty:&#x27;80 pcs&#x27;, date:&#x27;Jun 22&#x27;, conf:0.68, path:&#x27;05 · WO expedite&#x27;},
+    result:{
+      opts:[{cls:&#x27;p1&#x27;,rb:&#x27;rb-p1&#x27;,rbLabel:&#x27;GATE&#x27;,title:&#x27;WO-3820 expedite + overtime&#x27;,meta:{date:&#x27;Jun 22&#x27;,qty:&#x27;80 pcs&#x27;,cost:&#x27;$4,100&#x27;,action:&#x27;GATE&#x27;},note:&#x27;2-day pull-in feasible with OT approval. MFG manager approval required.&#x27;,btns:[{cls:&#x27;gate&#x27;,label:&#x27;Request MFG approval&#x27;},{cls:&#x27;sec&#x27;,label:&#x27;Reject&#x27;}]}],
+      muted:[&#x27;No STO options — all plants at zero. No BOM alternative found.&#x27;],
+      adv:{title:&#x27;⚠ GATE: overtime cost $4,100 requires manager approval&#x27;,body:&#x27;OT for 2 shifts + line re-priority. MFG manager must approve before expedite submitted.&#x27;,action:&#x27;→ Routing to MFG manager approval queue · expires in 4 hours&#x27;},
+      rec:{text:&#x27;Expedite feasible Jun 22 but requires GATE approval.&#x27;,sub:&#x27;Qty: 80 pcs · Commit: Jun 22 · OT cost: $4,100 · Conf: 68%&#x27;},
+      actions:[{cls:&#x27;gate&#x27;,label:&#x27;Request MFG approval&#x27;},{cls:&#x27;esc-btn&#x27;,label:&#x27;Escalate to planner&#x27;}],
+    }
+  },
+  {
+    title:&#x27;ATP Fulfillment Agent&#x27;, sub:&#x27;Step 06 · Full escalation&#x27;,
+    trigger:&#x27;human&#x27;, input:&#x27;Pull in PO-99102 from Jul 10 → Jun 25? 150 units, GB300-NVL72.&#x27;,
+    stepHdr:&#x27;Checking step 06 — material root cause...&#x27;,
+    tools:[
+      {fn:&#x27;get_atp_status(PO-99102)&#x27;, badge:&#x27;SAP CO9&#x27;, ok:true, result:&#x27;ATP: 0 | All steps exhausted above&#x27;},
+      {fn:&#x27;get_bom_shortage(GB300-NVL72, 150)&#x27;, badge:&#x27;SAP CS03&#x27;, warn:true, result:&#x27;CPU-A421: 80 short | Supplier: SUP-03 | Alt: none&#x27;},
+      {fn:&#x27;get_supplier_commit(CPU-A421, SUP-03)&#x27;, badge:&#x27;SRM&#x27;, warn:true, result:&#x27;Commit: Jun 28 | Qty: 80u | Confidence: 0.41 (low)&#x27;},
+      {fn:&#x27;get_bom_shortage(GB300-NVL72, 150)&#x27;, badge:&#x27;SAP CS03&#x27;, warn:true, result:&#x27;MEM-B220: 30 short | Supplier: SUP-07 | Commit: Jun 22&#x27;},
+    ],
+    always:{qty:&#x27;150 pcs&#x27;, date:null, conf:0.41, path:&#x27;06 · ESCALATE&#x27;},
+    result:{
+      opts:[{cls:&#x27;esc&#x27;,rb:&#x27;rb-esc&#x27;,rbLabel:&#x27;ESCALATE&#x27;,title:&#x27;Material shortage — no commit possible&#x27;,meta:{date:&#x27;Cannot commit&#x27;,qty:&#x27;150 pcs&#x27;,cost:&#x27;—&#x27;,action:&#x27;ESCALATE&#x27;},note:&#x27;CPU-A421: 80 short, SUP-03 commits Jun 28 (low confidence). MEM-B220: 30 short, Jun 22.&#x27;,btns:[{cls:&#x27;esc&#x27;,label:&#x27;Escalate to Sourcing&#x27;}]}],
+      muted:[&#x27;Air, STO, rework, WO expedite — all paths checked and exhausted.&#x27;],
+      adv:{title:&#x27;Short components: CPU-A421 (-80u) · MEM-B220 (-30u)&#x27;,body:&#x27;Binding constraint: CPU-A421 supplier commit Jun 28 with 0.41 confidence. Earliest possible: Jul 1 assuming SUP-03 commit holds.&#x27;,action:&#x27;→ Escalating to Sourcing with full shortage packet · Audit log updated&#x27;},
+      rec:{text:&#x27;Cannot commit Jun 25. Earliest realistic: Jul 1 (if SUP-03 holds).&#x27;,sub:&#x27;Qty: 150 pcs · No commit · Conf: 41% · Action: ESCALATE to Sourcing&#x27;},
+      actions:[{cls:&#x27;esc-btn&#x27;,label:&#x27;Escalate to Sourcing&#x27;},{cls:&#x27;sec&#x27;,label:&#x27;View shortage packet&#x27;}],
+    }
+  },
+];
+
+let currentScenario=0;
+
+function el(id){return document.getElementById(id)}
+function sc(){return SCENARIOS[currentScenario]}
+
+function loadScenario(idx){
+  currentScenario=idx;
+  document.querySelectorAll(&#x27;.sc-btn&#x27;).forEach((b,i)=&gt;b.classList.toggle(&#x27;active&#x27;,i===idx));
+  el(&#x27;tb-title&#x27;).textContent=sc().title;
+  el(&#x27;chat-body&#x27;).innerHTML=&#x27;&#x27;;
+  el(&#x27;status-dot&#x27;).className=&#x27;dot busy&#x27;;
+  el(&#x27;tb-sub&#x27;).textContent=&#x27;Processing...&#x27;;
+  runScenario();
+}
+
+function replayScenario(){loadScenario(currentScenario)}
+
+function addEl(html,delay=0){
+  return new Promise(r=&gt;setTimeout(()=&gt;{
+    const d=document.createElement(&#x27;div&#x27;);
+    d.innerHTML=html;
+    el(&#x27;chat-body&#x27;).appendChild(d.firstElementChild);
+    el(&#x27;chat-body&#x27;).scrollTop=el(&#x27;chat-body&#x27;).scrollHeight;
+    r();
+  },delay));
+}
+
+async function runScenario(){
+  const s=sc();
+  await new Promise(r=&gt;setTimeout(r,200));
+
+  if(s.trigger===&#x27;system&#x27;){
+    await addEl(`&lt;div class=&quot;sys-msg&quot;&gt;${s.input}&lt;/div&gt;`);
+  } else {
+    await addEl(`&lt;div class=&quot;user-msg&quot;&gt;${s.input}&lt;/div&gt;`);
+  }
+  await new Promise(r=&gt;setTimeout(r,400));
+  await addEl(`&lt;div class=&quot;step-hdr&quot;&gt;${s.stepHdr}&lt;/div&gt;`);
+  await new Promise(r=&gt;setTimeout(r,200));
+
+  for(let i=0;i&lt;s.tools.length;i++){
+    const t=s.tools[i];
+    const icon=t.warn?`&lt;span class=&quot;tc-warn&quot;&gt;⚠&lt;/span&gt;`:`&lt;span class=&quot;tc-ok&quot;&gt;✓&lt;/span&gt;`;
+    const id=`tc-${Date.now()}-${i}`;
+    await addEl(`&lt;div class=&quot;tool-card&quot; id=&quot;${id}&quot;&gt;
+      &lt;div class=&quot;tc-top&quot;&gt;&lt;span class=&quot;tc-fn&quot;&gt;${t.fn}&lt;/span&gt;&lt;span class=&quot;tc-badge&quot;&gt;${t.badge}&lt;/span&gt;${icon}&lt;/div&gt;
+      &lt;div class=&quot;tc-result&quot;&gt;${t.result}&lt;/div&gt;
+    &lt;/div&gt;`,i===0?0:380);
+    await new Promise(r=&gt;setTimeout(r,80));
+    document.getElementById(id)?.classList.add(&#x27;show&#x27;);
+  }
+  await new Promise(r=&gt;setTimeout(r,500));
+
+  const dateDisp=s.always.date||&#x27;Cannot commit&#x27;;
+  const dateColor=s.always.date?&#x27;good&#x27;:&#x27;&#x27;;
+  const confPct=Math.round(s.always.conf*100);
+  const confHex=confPct&gt;=75?&#x27;#27500A&#x27;:confPct&gt;=60?&#x27;#854F0B&#x27;:&#x27;#A32D2D&#x27;;
+  await addEl(`&lt;div class=&quot;always-strip&quot;&gt;
+    &lt;div class=&quot;as-item&quot;&gt;&lt;label&gt;Qty&lt;/label&gt;&lt;span&gt;${s.always.qty}&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;as-item&quot;&gt;&lt;label&gt;Commit date&lt;/label&gt;&lt;span class=&quot;${dateColor}&quot;&gt;${dateDisp}&lt;/span&gt;&lt;/div&gt;
+    &lt;div class=&quot;as-item&quot;&gt;&lt;label&gt;Confidence&lt;/label&gt;
+      &lt;div class=&quot;conf-mini&quot;&gt;&lt;div class=&quot;conf-bar&quot;&gt;&lt;div class=&quot;conf-fill&quot; style=&quot;width:${confPct}%;background:${confHex}&quot;&gt;&lt;/div&gt;&lt;/div&gt;
+      &lt;span style=&quot;font-size:8px;font-weight:500;color:${confHex}&quot;&gt;${confPct}%&lt;/span&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;as-item&quot;&gt;&lt;label&gt;Path&lt;/label&gt;&lt;span&gt;${s.always.path}&lt;/span&gt;&lt;/div&gt;
+  &lt;/div&gt;`);
+  await new Promise(r=&gt;setTimeout(r,300));
+
+  for(const opt of s.result.opts){
+    const metaHtml=Object.entries(opt.meta).map(([k,v])=&gt;`&lt;span&gt;${k} &lt;strong&gt;${v}&lt;/strong&gt;&lt;/span&gt;`).join(&#x27;&#x27;);
+    const btnsHtml=opt.btns.map(b=&gt;`&lt;div class=&quot;obtn ${b.cls}&quot;&gt;${b.label}&lt;/div&gt;`).join(&#x27;&#x27;);
+    await addEl(`&lt;div class=&quot;opt-card ${opt.cls}&quot;&gt;
+      &lt;div class=&quot;opt-top&quot;&gt;&lt;span class=&quot;rb ${opt.rb}&quot;&gt;${opt.rbLabel}&lt;/span&gt;&lt;span class=&quot;opt-title&quot;&gt;${opt.title}&lt;/span&gt;&lt;/div&gt;
+      &lt;div class=&quot;opt-meta&quot;&gt;${metaHtml}&lt;/div&gt;
+      &lt;div class=&quot;opt-note&quot;&gt;${opt.note}&lt;/div&gt;
+      &lt;div class=&quot;opt-btns&quot;&gt;${btnsHtml}&lt;/div&gt;
+    &lt;/div&gt;`,200);
+  }
+
+  for(const m of s.result.muted){
+    await addEl(`&lt;div class=&quot;muted-line&quot;&gt;${m}&lt;/div&gt;`,100);
+  }
+
+  if(s.result.adv){
+    await addEl(`&lt;div class=&quot;advisory&quot;&gt;
+      &lt;div class=&quot;adv-t&quot;&gt;${s.result.adv.title}&lt;/div&gt;
+      &lt;div class=&quot;adv-b&quot;&gt;${s.result.adv.body}&lt;/div&gt;
+      &lt;div class=&quot;adv-b&quot; style=&quot;font-weight:500;margin-top:2px&quot;&gt;${s.result.adv.action}&lt;/div&gt;
+    &lt;/div&gt;`,200);
+  }
+
+  await addEl(`&lt;div class=&quot;rec-strip&quot;&gt;
+    &lt;div class=&quot;rec-t&quot;&gt;${s.result.rec.text}&lt;/div&gt;
+    &lt;div class=&quot;rec-s&quot;&gt;${s.result.rec.sub}&lt;/div&gt;
+  &lt;/div&gt;`,200);
+
+  const mainBtns=s.result.actions.map(a=&gt;`&lt;div class=&quot;main-btn ${a.cls}&quot;&gt;${a.label}&lt;/div&gt;`).join(&#x27;&#x27;);
+  await addEl(`&lt;div class=&quot;action-row&quot;&gt;${mainBtns}&lt;/div&gt;`,100);
+
+  el(&#x27;status-dot&#x27;).className=&#x27;dot&#x27;;
+  el(&#x27;tb-sub&#x27;).textContent=sc().sub;
+}
+
+loadScenario(0);
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe>
 </section>
 
 <hr class="divider">
@@ -591,8 +1525,8 @@
     <div class="assumption-item">
       <div class="icon">↩️</div>
       <div>
-        <h4>No Rollback; Approver Not Authenticated</h4>
-        <p>PO changes wait for a planner's approval and every decision is logged, but the approver's name isn't verified and approved changes can't be rolled back. Production needs login-based approval rights and an SAP change-order rollback path.</p>
+        <h4>No Rollback / Change Approval</h4>
+        <p>PO method changes write directly to DB. Production requires SAP change order workflow with approval steps and rollback capability.</p>
       </div>
     </div>
     <div class="assumption-item">
@@ -652,9 +1586,8 @@
       <h3>Why temperature=0?</h3>
       <p style="font-size:0.82rem;color:#94a3b8;margin-top:0.5rem;">
         Supply chain routing decisions should be <strong>reproducible</strong>. Temperature=0 minimizes
-        randomness in the LLM's routing. It isn't a hard guarantee, so quantities, dates, PO selection
-        and the approval gate are computed in Python and never depend on the LLM — a deliberate
-        product decision, not a default.
+        randomness in the LLM's routing. It isn't a hard guarantee, so quantities, dates and PO selection
+        are computed in Python and never depend on the LLM. This is a deliberate product decision, not a default.
       </p>
     </div>
   </div>
@@ -666,52 +1599,24 @@
 <section id="roadmap">
   <div class="section-label">What's Next</div>
   <h2>From Prototype to Production</h2>
-  <p class="intro-text">
-    The prototype proves the concept and validates the agent architecture.
-    Three phases to production readiness.
-  </p>
-  <div class="roadmap">
-    <div class="roadmap-item">
-      <div class="roadmap-dot now">P1</div>
-      <div class="roadmap-content">
-        <h4>Now — Prototype (Current State)</h4>
-        <p>Functional demo with mock SAP data. Full agent flow validated.</p>
-        <ul>
-          <li>SQLite mock database with 4 materials, 5 POs</li>
-          <li>5 test scenarios covering all decision paths</li>
-          <li>Planner approval before any PO change, with an append-only approval log</li>
-          <li>Full message trace and audit trail</li>
-        </ul>
-      </div>
-    </div>
-    <div class="roadmap-item">
-      <div class="roadmap-dot next">P2</div>
-      <div class="roadmap-content">
-        <h4>Beta — Integration</h4>
-        <p>Connect to real systems, harden for concurrent use.</p>
-        <ul>
-          <li>PostgreSQL (replace SQLite for concurrency)</li>
-          <li>SAP RFC/BAPI connector via PYCO or REST API</li>
-          <li>API authentication (API key / OAuth)</li>
-          <li>Async LLM calls to prevent request blocking</li>
-          <li>Freight cost API integration for ROI gating</li>
-        </ul>
-      </div>
-    </div>
-    <div class="roadmap-item">
-      <div class="roadmap-dot future">P3</div>
-      <div class="roadmap-content">
-        <h4>Production — Scale & Govern</h4>
-        <p>Enterprise-grade reliability, compliance, and observability.</p>
-        <ul>
-          <li>Multi-plant allocation logic</li>
-          <li>Approval matrix: approvers checked against role and order value</li>
-          <li>LLM cost/token monitoring and budget guardrails</li>
-          <li>Full audit logging to data warehouse</li>
-          <li>Rollback workflow via SAP change orders</li>
-        </ul>
-      </div>
-    </div>
+  <p class="intro-text">Read-only first. The agent gets approval and write steps only after its answers match experienced planners.</p>
+  <div class="phase-grid">
+    <div class="phase"><div class="ph">P1 · Now</div><h4>Prototype</h4><p>One path working end to end.</p>
+      <ul><li>3 agents on mock SAP data</li><li>5 test scenarios</li><li>Full workflow designed</li></ul></div>
+    <div class="phase p2"><div class="ph">P2</div><h4>Shadow mode</h4><p>Answers next to planners, read-only.</p>
+      <ul><li>Live SAP reads</li><li>Cross-plant stock</li><li>Tested on 100+ past requests</li></ul>
+      <div class="g">Go when: answers match senior planners, zero wrong commits</div></div>
+    <div class="phase p3"><div class="ph">P3</div><h4>Assisted</h4><p>Agent proposes, people approve.</p>
+      <ul><li>Approval queue</li><li>Work order, rework, shortage steps</li><li>Audit log</li></ul>
+      <div class="g">Go when: most proposals accepted unchanged</div></div>
+    <div class="phase p4"><div class="ph">P4</div><h4>Scale</h4><p>The whole backlog, not one order.</p>
+      <ul><li>Parallel checks</li><li>Nightly backlog re-prioritization</li><li>"What if" follow-up questions</li></ul></div>
+  </div>
+  <div class="kpi-row" style="margin-top:1.2rem">
+    <div class="kpi"><div class="k">Time to answer</div><div class="d">Under 60 s, from hours</div></div>
+    <div class="kpi"><div class="k">Commit accuracy</div><div class="d">Promised vs actual arrival</div></div>
+    <div class="kpi"><div class="k">Auto-resolved</div><div class="d">Requests closed without escalation</div></div>
+    <div class="kpi"><div class="k">Planner acceptance</div><div class="d">Proposals approved as-is</div></div>
   </div>
 </section>
 
@@ -720,35 +1625,30 @@
 <!-- CLOSING -->
 <section style="text-align:center;padding-bottom:6rem">
   <div class="section-label">Summary</div>
-  <h2 style="max-width:700px;margin:0 auto 1rem">AI PM Perspective</h2>
+  <h2 style="max-width:760px;margin:0 auto 1rem">AI PM Perspective</h2>
   <p style="color:#94a3b8;max-width:680px;margin:0 auto 2rem;font-size:1rem">
-    This system demonstrates the full lifecycle of an AI product decision:
-    identifying the right problem to automate, choosing an agent architecture that matches
-    the workflow structure, drawing clear scope boundaries, and designing for explainability
-    from day one — because supply chain decisions require audit trails, not black boxes.
+    Most of the work was deciding where AI should make decisions, and where it shouldn't.
   </p>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;max-width:700px;margin:0 auto">
-    <div class="card" style="text-align:center">
-      <div style="font-size:1.5rem;margin-bottom:0.5rem">🎯</div>
-      <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.3rem">Right Problem</div>
-      <div style="font-size:0.78rem;color:#64748b">Manual, repetitive, rules-based — high AI automation fit</div>
-    </div>
-    <div class="card" style="text-align:center">
-      <div style="font-size:1.5rem;margin-bottom:0.5rem">🏗️</div>
-      <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.3rem">Right Architecture</div>
-      <div style="font-size:0.78rem;color:#64748b">Agent separation mirrors organizational roles (planner, compliance)</div>
-    </div>
-    <div class="card" style="text-align:center">
-      <div style="font-size:1.5rem;margin-bottom:0.5rem">📊</div>
-      <div style="font-size:0.85rem;font-weight:700;margin-bottom:0.3rem">Right Constraints</div>
-      <div style="font-size:0.78rem;color:#64748b">Explainability, auditability, and determinism prioritized over novelty</div>
-    </div>
+  <div class="pm-row">
+    <div class="card"><div class="t">Right problem</div><div class="d">Frequent, rule-heavy requests slowed down by chasing other teams.</div></div>
+    <div class="card"><div class="t">Math stays in code</div><div class="d">ATP and ranking are plain Python. The LLM reads requests and policy and writes the reply.</div></div>
+    <div class="card"><div class="t">People own promises</div><div class="d">The agent recommends. A named person approves anything that costs money or moves a date.</div></div>
+    <div class="card"><div class="t">Small build, full map</div><div class="d">One path built end to end. The rest designed down to SAP transactions and owners.</div></div>
   </div>
 </section>
 
 <footer>
-  ATP Fulfillment Agent · Prototype · Built with LangGraph + Claude Sonnet · All data is mock/fictional
+  ATP Fulfillment Agent · Prototype and target design · LangGraph + Claude · All data is mock
 </footer>
 
+<script>
+function wfView(v){
+  var fig=document.getElementById('wf-fig'), grid=document.getElementById('wf-grid');
+  fig.classList.toggle('show-par', v==='par'); grid.classList.toggle('show-par-notes', v==='par');
+  document.getElementById('wf-tab-step').classList.toggle('active', v==='step');
+  document.getElementById('wf-tab-par').classList.toggle('active', v==='par');
+  document.getElementById('wf-built-toggle').style.visibility = v==='step' ? 'visible' : 'hidden';
+}
+</script>
 </body>
 </html>

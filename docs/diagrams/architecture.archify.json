@@ -3,45 +3,55 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "askATP — Multi-Agent ATP Copilot",
-    "output": ".archify/architecture-askatp-clean-20261105-051903/askatp-overview.html",
+    "output": ".archify/architecture-askatp-overview-20261104-014802/askatp-overview.html",
     "quality_profile": "showcase",
-    "locale": "en"
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/hpchou2/askATP-agent.git",
+      "provider": "github",
+      "revision": "72a4152a271d751272f9a9c1994f8dd1f523feb2"
+    }
   },
   "components": [
-    { "id": "client", "type": "external", "label": "Planner / ERP", "sublabel": "API client", "pos": [40, 40], "size": [140, 64] },
-    { "id": "api", "type": "frontend", "label": "FastAPI", "sublabel": "/atp-check · /approve/{id}", "pos": [290, 40], "size": [170, 64] },
-    { "id": "supervisor", "type": "backend", "label": "Supervisor", "sublabel": "routes: sap | policy | FINISH", "pos": [590, 40], "size": [200, 64] },
-    { "id": "llm", "type": "cloud", "label": "Claude", "sublabel": "temperature=0", "pos": [1110, 40], "size": [130, 64] },
-    { "id": "checkpoints", "type": "database", "label": "checkpoints.db", "sublabel": "runs paused for approval", "pos": [290, 220], "size": [170, 64] },
-    { "id": "sap_agent", "type": "backend", "label": "SAP Agent", "sublabel": "ReAct, 3 tools", "pos": [590, 220], "size": [200, 64] },
-    { "id": "policy_agent", "type": "security", "label": "Policy Agent", "sublabel": "ReAct, 1 tool", "pos": [900, 220], "size": [170, 64] },
-    { "id": "atp_tools", "type": "backend", "label": "ATP tools", "sublabel": "stock − orders + POs", "pos": [480, 400], "size": [180, 64] },
-    { "id": "po_change", "type": "security", "label": "PO change tool", "sublabel": "⏸ waits for planner approval", "pos": [700, 400], "size": [190, 64] },
-    { "id": "policy_tool", "type": "backend", "label": "Policy reader", "sublabel": "plant air rules", "pos": [910, 400], "size": [170, 64] },
-    { "id": "db", "type": "database", "label": "SQLite mock SAP", "sublabel": "stock · SO · PO · approval_log", "pos": [580, 580], "size": [210, 64] },
-    { "id": "policy_md", "type": "database", "label": "air_shipping_policy.md", "sublabel": "per-plant rules", "pos": [905, 580], "size": [180, 64] }
+    { "id": "client", "type": "external", "label": "Planner / ERP", "sublabel": "API client", "pos": [40, 60], "size": [130, 60] },
+    { "id": "api", "type": "frontend", "label": "FastAPI", "sublabel": "POST /atp-check", "pos": [290, 58], "size": [150, 64], "tag": "Pydantic v2",
+      "sources": [{ "path": "api.py", "line": 36, "end_line": 55 }, { "path": "api.py", "line": 149, "end_line": 194 }] },
+    { "id": "supervisor", "type": "backend", "label": "Supervisor", "sublabel": "routes: sap | policy | FINISH", "pos": [560, 58], "size": [190, 64], "tag": "structured output",
+      "sources": [{ "path": "agents/supervisor.py", "line": 40, "end_line": 50 }, { "path": "agents/supervisor.py", "line": 144, "end_line": 165 }, { "path": "agents/supervisor.py", "line": 182, "end_line": 207 }] },
+    { "id": "llm", "type": "cloud", "label": "Claude", "sublabel": "temperature=0", "pos": [880, 60], "size": [140, 60],
+      "sources": [{ "path": "agents/supervisor.py", "line": 130, "end_line": 134 }] },
+    { "id": "sap_agent", "type": "backend", "label": "SAP Agent", "sublabel": "ReAct, 3 tools", "pos": [430, 250], "size": [160, 64],
+      "sources": [{ "path": "agents/sap_agent.py", "line": 167, "end_line": 173 }] },
+    { "id": "policy_agent", "type": "security", "label": "Policy Agent", "sublabel": "ReAct, 1 tool", "pos": [720, 250], "size": [160, 64],
+      "sources": [{ "path": "agents/policy_agent.py", "line": 62, "end_line": 68 }] },
+    { "id": "sap_tools", "type": "backend", "label": "SAP tools", "sublabel": "ATP netting · PO walk · SEA→AIR", "pos": [415, 430], "size": [190, 64], "tag": "deterministic",
+      "sources": [{ "path": "tools/sap_tools.py", "line": 34, "end_line": 60 }, { "path": "tools/sap_tools.py", "line": 122, "end_line": 140 }, { "path": "tools/sap_tools.py", "line": 268, "end_line": 290 }] },
+    { "id": "policy_tool", "type": "backend", "label": "Policy reader", "sublabel": "read_air_shipping_policy", "pos": [705, 430], "size": [190, 64],
+      "sources": [{ "path": "tools/policy_tools.py", "line": 20, "end_line": 47 }] },
+    { "id": "db", "type": "database", "label": "SQLite mock SAP", "sublabel": "stock · SO · PO tables", "pos": [425, 600], "size": [170, 64],
+      "sources": [{ "path": "setup_db.py", "line": 1, "end_line": 40 }, { "path": "tools/sap_tools.py", "line": 360, "end_line": 370 }] },
+    { "id": "policy_md", "type": "database", "label": "air_shipping_policy.md", "sublabel": "per-plant rules", "pos": [710, 600], "size": [180, 64],
+      "sources": [{ "path": "policies/air_shipping_policy.md", "line": 1, "end_line": 49 }] }
   ],
   "boundaries": [
-    { "kind": "region", "label": "LangGraph agents", "wraps": ["supervisor", "sap_agent", "policy_agent"] },
-    { "kind": "security-group", "label": "Plain Python tools", "wraps": ["atp_tools", "po_change", "policy_tool"] }
+    { "kind": "region", "label": "LangGraph StateGraph (supervisor pattern)", "wraps": ["supervisor", "sap_agent", "policy_agent"] },
+    { "kind": "security-group", "label": "Plain Python — no LLM math", "wraps": ["sap_tools", "policy_tool"] }
   ],
   "connections": [
-    { "id": "c-request", "from": "client", "to": "api", "label": "HTTP JSON", "variant": "emphasis" },
-    { "id": "c-invoke", "from": "api", "to": "supervisor", "label": "run / resume", "variant": "emphasis" },
-    { "id": "c-checkpoint", "from": "api", "to": "checkpoints", "label": "save / load run" },
-    { "id": "c-llm", "from": "supervisor", "to": "llm", "label": "LLM calls" },
-    { "id": "c-route-sap", "from": "supervisor", "to": "sap_agent", "label": "delegate" },
+    { "id": "c-request", "from": "client", "to": "api", "label": "JSON order", "variant": "emphasis" },
+    { "id": "c-invoke", "from": "api", "to": "supervisor", "label": "graph.invoke", "variant": "emphasis" },
+    { "id": "c-llm", "from": "supervisor", "to": "llm", "label": "decide next" },
+    { "id": "c-route-sap", "from": "supervisor", "to": "sap_agent", "label": "delegate / return" },
     { "id": "c-route-policy", "from": "supervisor", "to": "policy_agent", "label": "if SEA late" },
-    { "id": "c-atp-tools", "from": "sap_agent", "to": "atp_tools", "label": "check ATP" },
-    { "id": "c-po-change", "from": "sap_agent", "to": "po_change", "label": "if AIR allowed" },
-    { "id": "c-policy-tool", "from": "policy_agent", "to": "policy_tool", "label": "read rules" },
-    { "id": "c-select", "from": "atp_tools", "to": "db", "label": "read" },
-    { "id": "c-update", "from": "po_change", "to": "db", "label": "update after approval", "variant": "security" },
-    { "id": "c-md", "from": "policy_tool", "to": "policy_md", "label": "read" }
+    { "id": "c-sap-tools", "from": "sap_agent", "to": "sap_tools", "label": "tool calls" },
+    { "id": "c-policy-tool", "from": "policy_agent", "to": "policy_tool", "label": "tool call" },
+    { "id": "c-db", "from": "sap_tools", "to": "db", "label": "SELECT / UPDATE PO" },
+    { "id": "c-md", "from": "policy_tool", "to": "policy_md", "label": "read" },
+    { "id": "c-answer", "from": "api", "to": "client", "label": "answer + trace", "variant": "dashed" }
   ],
   "cards": [
-    { "dot": "cyan", "title": "Two API calls on the air path", "items": ["POST /atp-check runs the agents and pauses before any PO change", "POST /approve/{thread_id} resumes the saved run"] },
-    { "dot": "emerald", "title": "AI vs deterministic", "items": ["LLM routes, reads policy text, writes the summary", "Quantities, dates, PO selection and the approval gate are Python"] },
-    { "dot": "rose", "title": "Approval gate", "items": ["PO change tool pauses the whole run until a planner decides", "Every decision appended to approval_log"] }
+    { "dot": "cyan", "title": "Request path", "items": ["One POST runs the whole graph", "Response = decision + full audit trace"] },
+    { "dot": "emerald", "title": "AI vs deterministic", "items": ["LLM only routes and reads policy text", "Quantities and dates computed in Python"] },
+    { "dot": "rose", "title": "Escalation gate", "items": ["SEA late → Policy Agent checks plant rules", "AIR permitted → switch break-even POs"] }
   ]
 }
