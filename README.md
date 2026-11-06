@@ -34,11 +34,15 @@ Whether it comes from sales, a customer's online order, or an ERP alert, answeri
 | **Data** | SQLite mock of SAP tables (`stock`, `sales_orders`, `purchase_orders`, `material_master`) using SAP field names (`matnr`, `werks`, `labst`, `menge`, `eindt`). `setup_db.py` reseeds it to a known state for repeatable tests. |
 | **Observability** | Every response includes the full message trace: supervisor decisions, tool calls with arguments, and tool results. Each routing step and tool call is also logged to the console, along with total request time. |
 
-**Scope of this repo:** It is the first slice of the full planner workflow described in [Where this is going](#where-this-is-going--the-full-planner-workflow). It implements the core escalation path. That is the ATP check, then the SEA→AIR mode upgrade, gated by policy. 
+**Scope of this repo.** This is the first slice of the [full planner workflow](#where-this-is-going--the-full-planner-workflow). It implements the core escalation path:
 
-**Why multi-agent for this slice?** On its own, this slice is a fixed decision table and could be a plain function. It's built as a supervisor with sub-agents because the full workflow isn't a fixed table. Requests arrive as free text, some steps are open-ended (finding a shortage's root cause), and each lever has its own data and rules: credit hold, cross-plant transfer, work-order expedite, rework. With a supervisor, adding a lever means adding one agent and one routing rule, not rewriting the control flow. Each agent can only use its own tools, so the Policy Agent can never touch a PO. Anything that must be correct is enforced in code, not in prompts: the ATP math and PO selection. So the LLM's routing can change which path a request takes, but never the numbers.
+1. **ATP check:** can stock plus incoming POs cover the order by the requested date?
+2. **Policy check:** if sea freight arrives too late, does this plant allow air freight?
+3. **SEA→AIR upgrade:** if it does, switch the fewest POs needed to air.
 
-Not a developer? The [CIO brief](https://hpchou2.github.io/askATP-agent/CIO_Brief.html) explains the business case on one page (see [Related documents](#related-documents)).
+**Why multi-agent for this slice?** On its own, this slice is just a few fixed if/else rules and could be a plain function. It's built as a supervisor with sub-agents because the full workflow can't be written as fixed rules. Requests arrive as free text, some steps are open-ended (finding a shortage's root cause), and each step has its own data and rules: credit hold, cross-plant transfer, work-order expedite, rework. With a supervisor, adding a step means adding one agent and one routing rule, not rewriting the control flow. Each agent can only use its own tools, so the Policy Agent can never touch a PO. Anything that must be correct is enforced in code, not in prompts: the ATP math and PO selection. So the LLM's routing can change which path a request takes, but never the numbers.
+
+**Want the big picture without code?** The [CIO brief](https://hpchou2.github.io/askATP-agent/CIO_Brief.html) covers the problem, the architecture and the target design. Jump straight to [how it works](#how-it-works) (the step-by-step logic) and the [test scenarios](#test-scenarios), or see what's planned next: the [full planner workflow](#where-this-is-going--the-full-planner-workflow) and the [demo scenarios](#demo-scenarios).
 
 ---
 
@@ -332,7 +336,7 @@ This is a working prototype of one slice of the workflow. Things it deliberately
 
 ## Where this is going — the full planner workflow
 
-Air freight is only **one** of the levers a fulfillment planner can pull. When a request can't be met, a planner works through the options in a fixed order, starting with the least disruptive and cheapest, and stops at the first one that works. This repo automates one of those levers. The target design covers all of them.
+Air freight is only **one** of the steps a fulfillment planner can try. When a request can't be met, a planner works through the steps in a set order, starting with the least disruptive and cheapest, and stops at the first one that works. This repo automates one of those steps. The target design covers all of them.
 
 An interactive version of this design is in [docs/atp_langgraph_v4.html](https://hpchou2.github.io/askATP-agent/atp_langgraph_v4.html). Open it to click through each node.
 
@@ -470,7 +474,7 @@ askATP_simple/
 │   └── air_shipping_policy.md    — per-plant AIR shipping authorization rules
 │
 ├── docs/                         — the only folder published by GitHub Pages
-│   ├── CIO_Brief.html            — business case, assumptions, roadmap
+│   ├── CIO_Brief.html            — non-technical overview: problem, workflow, demo, roadmap
 │   ├── CIO_Talking_Points.md     — 2–3 min spoken walkthrough for presenting
 │   ├── atp_langgraph_v4.html     — interactive target architecture (full planner workflow)
 │   ├── demo.html                 — scripted demo of six planner scenarios (mock data)
