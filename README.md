@@ -15,7 +15,9 @@ Whether it comes from sales, a customer's online order, or an ERP alert, answeri
 ### Video walkthrough
 
 <!-- Paste the GitHub user-attachments video URL on the line below to show an inline player. -->
+
 https://github.com/user-attachments/assets/4c85d8cb-56c1-4a01-b06c-450a5ecb2a74
+
 [Watch the narrated walkthrough in browser](https://hpchou2.github.io/askATP-agent/askATP-interview-voice-v2.mp4) (if the player doesn't load).
 
 ### Why it's more than an LLM demo
