@@ -12,6 +12,12 @@ Whether it comes from sales, a customer's online order, or an ERP alert, answeri
 
 <img src="docs/images/architecture.png" alt="askATP architecture: FastAPI hands each request to a LangGraph Supervisor, which routes to a SAP Agent and a Policy Agent. Their tools run deterministic Python against a SQLite mock of SAP and a Markdown policy file." width="900">
 
+### Video walkthrough
+
+<!-- Paste the GitHub user-attachments video URL on the line below to show an inline player. -->
+
+[Watch the narrated walkthrough](https://hpchou2.github.io/askATP-agent/askATP-interview-voice-v2.mp4) (opens in the browser if the player doesn't load).
+
 ### Why it's more than an LLM demo
 
 | | |
@@ -444,6 +450,7 @@ This README is the technical entry point. These documents cover the business sid
 |---|---|---|
 | [docs/CIO_Brief.html](https://hpchou2.github.io/askATP-agent/CIO_Brief.html) | One-page business case: the problem, architecture, where the AI is used, assumptions and constraints, and the path from prototype to production. | CIO, IT and supply-chain leadership, hiring managers |
 | [docs/CIO_Talking_Points.md](docs/CIO_Talking_Points.md) | A 2–3 minute spoken walkthrough of the same story: opening, problem, architecture and decision matrix. | Whoever presents the project in a meeting or interview |
+| [docs/askATP-interview-voice-v2.mp4](https://hpchou2.github.io/askATP-agent/askATP-interview-voice-v2.mp4) | Narrated video walkthrough of the project. | Anyone who prefers watching to reading |
 | [docs/demo.html](https://hpchou2.github.io/askATP-agent/demo.html) | Scripted playback of six planner scenarios from the target design (mock data, not live agent output). | Anyone who wants to see how the full design would feel to a planner |
 
 ---
@@ -476,6 +483,7 @@ askATP_simple/
 ├── docs/                         — the only folder published by GitHub Pages
 │   ├── CIO_Brief.html            — non-technical overview: problem, workflow, demo, roadmap
 │   ├── CIO_Talking_Points.md     — 2–3 min spoken walkthrough for presenting
+│   ├── askATP-interview-voice-v2.mp4 — narrated video walkthrough
 │   ├── atp_langgraph_v4.html     — interactive target architecture (full planner workflow)
 │   ├── demo.html                 — scripted demo of six planner scenarios (mock data)
 │   ├── diagrams/                 — architecture diagram source (Archify JSON)
